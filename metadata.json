@@ -1,0 +1,5 @@
+{
+  "name": "eBay Ad Generator",
+  "description": "An application that uses AI to generate professional advertisement images for eBay listings from a product image and description.",
+  "requestFramePermissions": []
+}
