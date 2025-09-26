@@ -1,8 +1,7 @@
 import React from 'react';
 
 interface GeneratedAdProps {
-    imageUrls: string[] | null;
-    isLoading: boolean;
+    imageUrls: (string | null)[] | null;
     onPreview: (url: string) => void;
 }
 
@@ -43,19 +42,39 @@ const AdSkeletonLoader: React.FC = () => (
 );
 
 
-const GeneratedAd: React.FC<GeneratedAdProps> = ({ imageUrls, isLoading, onPreview }) => {
+const GeneratedAd: React.FC<GeneratedAdProps> = ({ imageUrls, onPreview }) => {
+    // Initial state before any generation is triggered
+    if (!imageUrls) {
+        return (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="w-full aspect-video bg-slate-900 rounded-lg flex items-center justify-center overflow-hidden">
+                    <AdPlaceholder title="Style 1: Modern" description="Your clean & elegant ad."/>
+                </div>
+                 <div className="w-full aspect-video bg-slate-900 rounded-lg flex items-center justify-center overflow-hidden">
+                    <AdPlaceholder title="Style 2: Dynamic" description="Your Black & white ad."/>
+                </div>
+                <div className="w-full aspect-video bg-slate-900 rounded-lg flex items-center justify-center overflow-hidden">
+                    <AdPlaceholder title="Style 3: Balanced" description="Your professional ad."/>
+                </div>
+            </div>
+        );
+    }
+
+    // Loading and generated states
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {isLoading && (
-                <>
-                    <div className="w-full aspect-video bg-slate-900 rounded-lg flex items-center justify-center overflow-hidden"><AdSkeletonLoader/></div>
-                    <div className="w-full aspect-video bg-slate-900 rounded-lg flex items-center justify-center overflow-hidden"><AdSkeletonLoader/></div>
-                    <div className="w-full aspect-video bg-slate-900 rounded-lg flex items-center justify-center overflow-hidden"><AdSkeletonLoader/></div>
-                </>
-            )}
+            {imageUrls.map((url, index) => {
+                // If url is null, it means this ad is still generating, so show a skeleton loader.
+                if (!url) {
+                    return (
+                        <div key={`skeleton-${index}`} className="w-full aspect-video bg-slate-900 rounded-lg flex items-center justify-center overflow-hidden">
+                            <AdSkeletonLoader />
+                        </div>
+                    );
+                }
 
-            {!isLoading && imageUrls && (
-                 imageUrls.map((url, index) => (
+                // Otherwise, the ad is generated, so show the image and controls.
+                return (
                     <div key={index} className="flex flex-col items-center gap-3">
                          <div className="relative group w-full aspect-video bg-slate-900 rounded-lg flex items-center justify-center overflow-hidden">
                             <img src={url} alt={`Generated eBay Ad Style ${index + 1}`} className="w-full h-full object-contain" />
@@ -77,22 +96,8 @@ const GeneratedAd: React.FC<GeneratedAdProps> = ({ imageUrls, isLoading, onPrevi
                             Download Style {index + 1}
                         </a>
                     </div>
-                 ))
-            )}
-
-            {!isLoading && !imageUrls && (
-                <>
-                    <div className="w-full aspect-video bg-slate-900 rounded-lg flex items-center justify-center overflow-hidden">
-                        <AdPlaceholder title="Style 1: Modern" description="Your clean & elegant ad."/>
-                    </div>
-                     <div className="w-full aspect-video bg-slate-900 rounded-lg flex items-center justify-center overflow-hidden">
-                        <AdPlaceholder title="Style 2: Dynamic" description="Your Black & white ad."/>
-                    </div>
-                    <div className="w-full aspect-video bg-slate-900 rounded-lg flex items-center justify-center overflow-hidden">
-                        <AdPlaceholder title="Style 3: Balanced" description="Your professional ad."/>
-                    </div>
-                </>
-            )}
+                );
+            })}
         </div>
     );
 };
