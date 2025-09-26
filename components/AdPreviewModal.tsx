@@ -44,19 +44,21 @@ const AdPreviewModal: React.FC<AdPreviewModalProps> = ({ imageUrl, onClose }) =>
             aria-label="Ad Preview"
         >
             <div 
-                className="relative bg-slate-800 p-4 rounded-lg max-w-4xl w-full max-h-[90vh] flex flex-col"
+                className="relative bg-slate-800/50 backdrop-blur-sm p-2 rounded-xl shadow-2xl"
                 onClick={(e) => e.stopPropagation()} // Prevent clicks inside the modal from closing it
             >
                 <button
                     onClick={onClose}
-                    className="absolute top-2 right-2 text-slate-400 hover:text-white transition-colors z-10 p-1 bg-slate-800/50 rounded-full"
+                    className="absolute top-2 right-2 text-slate-400 hover:text-white transition-colors z-10 p-1 bg-slate-900/50 rounded-full"
                     aria-label="Close preview"
                 >
                     <CloseIcon className="w-6 h-6" />
                 </button>
-                <div className="flex-grow flex items-center justify-center overflow-hidden">
-                   <img src={imageUrl} alt="Enlarged ad preview" className="max-w-full max-h-full object-contain rounded-md" />
-                </div>
+                <img 
+                    src={imageUrl} 
+                    alt="Enlarged ad preview" 
+                    className="block rounded-lg max-w-[calc(100vw-4rem)] max-h-[calc(100vh-4rem)]" 
+                />
             </div>
         </div>
     );

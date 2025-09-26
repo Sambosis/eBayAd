@@ -19,6 +19,51 @@ Product Description: "${description}"
 8.  **Final Output:** The final image should be a single, cohesive advertisement graphic ready for an eBay listing. It should look polished and trustworthy.
 `;
 
+const DESCRIPTION_PROMPT_TEMPLATE = (productName: string) => `
+You are an expert eBay seller with years of experience in writing compelling product descriptions that sell.
+Your task is to generate a detailed, well-structured, and persuasive product description for an eBay listing.
+
+Use Google Search to find all relevant information about the following product: "${productName}".
+
+Based on your search results, create a description that includes:
+1.  **Catchy Title:** A brief, attention-grabbing title as the first line.
+2.  **Introduction:** A short paragraph summarizing the product and its main benefit.
+3.  **Key Features:** A bulleted list of the most important features and specifications.
+4.  **Condition:** Assume the product is "Brand New" and state this clearly.
+5.  **What's Included:** List what a buyer would typically receive in the box.
+6.  **Target Audience:** Briefly mention who this product is perfect for (e.g., "Ideal for students, professionals, and frequent travelers.").
+
+**Formatting Rules:**
+- Use clear headings with markdown for each section (e.g., "**Key Features:**").
+- Use markdown bullet points (-) for lists.
+- Keep the language professional but easy to understand.
+- Do not include pricing information.
+- Do not make up information. Base the description strictly on the search results.
+
+Generate only the text for the description, starting with the title.
+`;
+
+
+export const generateEbayDescription = async (productName: string): Promise<string> => {
+     if (!process.env.API_KEY) {
+        throw new Error("API_KEY environment variable not set.");
+    }
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    
+    const prompt = DESCRIPTION_PROMPT_TEMPLATE(productName);
+
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
+            tools: [{googleSearch: {}}],
+        },
+    });
+
+    return response.text;
+}
+
+
 export const generateEbayAdImage = async (
     description: string,
     imageBase64: string,
