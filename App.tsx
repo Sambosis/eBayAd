@@ -1,23 +1,66 @@
-import React, { useState, useCallback } from 'react';
+
+import React, { useState, useCallback, useEffect } from 'react';
 import ImageUploader from './components/ImageUploader';
 import GeneratedAd from './components/GeneratedAd';
-import { generateEbayAdImage, generateProductInfoFromImage } from './services/geminiService';
+import { generateEbayAdImage, generateProductInfoFromImage, generateAdStyleSuggestions } from './services/geminiService';
 import AdPreviewModal from './components/AdPreviewModal';
+import HistoryPanel from './components/HistoryPanel';
+import { useLocalStorage } from './hooks/useLocalStorage';
 import JSZip from 'jszip';
 
+// --- Type Definitions ---
+interface AdData {
+    styleName: string;
+    imageUrl: string;
+}
+export interface HistoryItem {
+    id: number;
+    productName: string;
+    productDescription: string;
+    productImage: {
+        base64: string;
+        type: string;
+        name: string;
+    };
+    ads: AdData[];
+    createdAt: string;
+}
+
+// FIX: Define a type for style objects to include the optional `isSuggested`
+// property. This resolves a TypeScript error when adding suggested styles or styles
+// from history, ensuring type consistency for all style objects.
+interface StyleData {
+    name: string;
+    description: string;
+    prompt: string;
+    isSuggested?: boolean;
+}
+
+// --- Icon Components ---
 const MagicWandIcon: React.FC<{ className?: string }> = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" d="M9.53 16.122a3 3 0 00-5.78 1.128 2.25 2.25 0 01-2.4 2.245 4.5 4.5 0 008.4-2.245c0-.399-.078-.78-.22-1.128zm0 0a15.998 15.998 0 003.388-1.62m-5.043-.025a15.998 15.998 0 011.622-3.385m5.043.025a15.998 15.998 0 001.622-3.385m3.388 1.62a15.998 15.998 0 00-1.622-3.385m-5.043-.025a15.998 15.998 0 01-3.388-1.621m-5.043.025a15.998 15.998 0 01-1.622-3.385m3.388 1.621a15.998 15.998 0 01-1.622-3.385" />
     </svg>
 );
-
 const DownloadIcon: React.FC<{ className?: string }> = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
     </svg>
 );
+const HistoryIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+);
+const SaveIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3H5.25A2.25 2.25 0 003 5.25v13.5" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15 3h4.5v4.5" />
+    </svg>
+);
 
-const STYLES = [
+
+const INITIAL_STYLES: StyleData[] = [
     { name: "Modern & Spec Driven", description: "Sleek, clean & spec-focused.", prompt: "Modern & Spec Driven: A sleek, contemporary aesthetic featuring clean lines, ample white space, and a minimalist design. This style focuses heavily on technical specifications and product features, presenting them in a clear, organized manner akin to a high-end spec sheet. The color palette is sophisticated and neutral, often using monochrome with a single accent color to draw attention to key details." },
     { name: "Bold & Dynamic", description: "Vibrant, energetic & action-oriented.", prompt: "Bold & Dynamic: An energetic and eye-catching style designed to create excitement. It uses vibrant, contrasting color schemes, dynamic angles, and geometric shapes to guide the viewer's attention. Typography is strong, impactful, and often used creatively to highlight the product's most exciting features and create a sense of action." },
     { name: "Elegant & Professional", description: "Sophisticated, refined & premium.", prompt: "Elegant & Professional: A sophisticated blend of modern aesthetics and engaging elements. Uses a refined color palette with eye catching accesnts and a balanced layout to build trust and convey premium quality." },
@@ -44,6 +87,17 @@ const toBase64 = (file: File): Promise<string> => {
     });
 };
 
+const base64ToFile = (base64: string, filename: string, mimeType: string): File => {
+    const byteCharacters = atob(base64);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], { type: mimeType });
+    return new File([blob], filename, { type: mimeType });
+};
+
 
 const App: React.FC = () => {
     const [productName, setProductName] = useState<string>('');
@@ -55,7 +109,11 @@ const App: React.FC = () => {
     const [isAnyGenerationActive, setIsAnyGenerationActive] = useState<boolean>(false);
     const [isZipping, setIsZipping] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
-    const [selectedAdUrl, setSelectedAdUrl] = useState<string | null>(null);
+    const [selectedAd, setSelectedAd] = useState<{ url: string; name: string } | null>(null);
+    const [styles, setStyles] = useState(INITIAL_STYLES);
+    const [isSuggestingStyles, setIsSuggestingStyles] = useState<boolean>(false);
+    const [history, setHistory] = useLocalStorage<HistoryItem[]>('ad-generator-history', []);
+    const [isHistoryPanelOpen, setIsHistoryPanelOpen] = useState(false);
 
     const handleImageChange = (file: File | null) => {
         if (file) {
@@ -68,10 +126,11 @@ const App: React.FC = () => {
         }
         setGeneratedAds(new Map());
         setIsAnyGenerationActive(false);
+        setStyles(INITIAL_STYLES);
     };
     
-    const handlePreview = (url: string) => {
-        setSelectedAdUrl(url);
+    const handlePreview = (url: string, name: string) => {
+        setSelectedAd({ url, name });
     };
 
     const handleAnalyzeImage = useCallback(async () => {
@@ -85,6 +144,7 @@ const App: React.FC = () => {
         setIsAnalyzingImage(true);
         setGeneratedAds(new Map());
         setIsAnyGenerationActive(false);
+        setStyles(INITIAL_STYLES);
 
         try {
             const imageBase64 = await toBase64(productImageFile);
@@ -119,7 +179,7 @@ const App: React.FC = () => {
         try {
             const imageBase64 = await toBase64(productImageFile);
             const mimeType = productImageFile.type;
-            const style = STYLES.find(s => s.name === styleName);
+            const style = styles.find(s => s.name === styleName);
             if (!style) throw new Error("Style not found");
 
             const adImage = await generateEbayAdImage(productDescription, imageBase64, mimeType, style.prompt);
@@ -135,7 +195,34 @@ const App: React.FC = () => {
                 return newAds;
             });
         }
-    }, [productDescription, productImageFile, generatedAds, isAnyGenerationActive]);
+    }, [productDescription, productImageFile, generatedAds, isAnyGenerationActive, styles]);
+
+    const handleSuggestStyles = useCallback(async () => {
+        if (!productDescription || !productImageFile) {
+            setError('Please provide a description and image first.');
+            return;
+        }
+        setError(null);
+        setIsSuggestingStyles(true);
+        try {
+            const imageBase64 = await toBase64(productImageFile);
+            const mimeType = productImageFile.type;
+            const suggestions = await generateAdStyleSuggestions(productDescription, imageBase64, mimeType);
+            
+            const existingStyleNames = new Set(styles.map(s => s.name));
+            const newUniqueSuggestions = suggestions
+                .filter(s => !existingStyleNames.has(s.name))
+                .map(s => ({ ...s, isSuggested: true }));
+            
+            setStyles(prevStyles => [...prevStyles, ...newUniqueSuggestions]);
+
+        } catch (e) {
+            console.error("Failed to suggest styles", e);
+            setError(e instanceof Error ? e.message : 'An unknown error occurred while suggesting styles.');
+        } finally {
+            setIsSuggestingStyles(false);
+        }
+    }, [productDescription, productImageFile, styles]);
 
 
     const handleDownloadAll = useCallback(async () => {
@@ -154,7 +241,7 @@ const App: React.FC = () => {
 
             generatedAds.forEach((url, styleName) => {
                 if (url) {
-                    const styleIndex = STYLES.findIndex(s => s.name === styleName);
+                    const styleIndex = styles.findIndex(s => s.name === styleName);
                     const base64Data = url.split(',')[1];
                     const safeStyleName = styleName.replace(/[^a-zA-Z0-9]/g, '-');
                     zip.file(`ebay-ad-style-${styleIndex + 1}-${safeStyleName}.png`, base64Data, { base64: true });
@@ -177,25 +264,111 @@ const App: React.FC = () => {
         } finally {
             setIsZipping(false);
         }
-    }, [productDescription, generatedAds]);
+    }, [productDescription, generatedAds, styles]);
     
-    const successfullyGeneratedCount = Array.from(generatedAds.values()).filter(v => v).length;
+    // --- History Functions ---
+    const handleSaveToHistory = useCallback(async () => {
+        if (!productImageFile || successfullyGeneratedCount === 0) return;
 
+        const imageBase64 = await toBase64(productImageFile);
+        
+        const newHistoryItem: HistoryItem = {
+            id: Date.now(),
+            productName,
+            productDescription,
+            productImage: {
+                base64: imageBase64,
+                type: productImageFile.type,
+                name: productImageFile.name,
+            },
+            ads: Array.from(generatedAds.entries())
+                .filter(([, url]) => url !== null)
+                .map(([styleName, imageUrl]) => ({ styleName, imageUrl: imageUrl! })),
+            createdAt: new Date().toISOString(),
+        };
+
+        setHistory(prevHistory => [newHistoryItem, ...prevHistory]);
+        setIsHistoryPanelOpen(true);
+    }, [productImageFile, productName, productDescription, generatedAds, setHistory]);
+
+    const handleLoadHistoryItem = useCallback((itemId: number) => {
+        const itemToLoad = history.find(item => item.id === itemId);
+        if (!itemToLoad) return;
+
+        // Restore state from history item
+        setProductName(itemToLoad.productName);
+        setProductDescription(itemToLoad.productDescription);
+
+        const imageFile = base64ToFile(itemToLoad.productImage.base64, itemToLoad.productImage.name, itemToLoad.productImage.type);
+        setProductImageFile(imageFile);
+        setImagePreview(URL.createObjectURL(imageFile));
+
+        const adsMap = new Map<string, string | null>();
+        itemToLoad.ads.forEach(ad => {
+            adsMap.set(ad.styleName, ad.imageUrl);
+        });
+        setGeneratedAds(adsMap);
+        
+        // Reset styles to default and add any suggested ones from the session
+        const loadedStyleNames = new Set(itemToLoad.ads.map(ad => ad.styleName));
+        const initialStyleNames = new Set(INITIAL_STYLES.map(s => s.name));
+        const allStyles = [...INITIAL_STYLES];
+        itemToLoad.ads.forEach(ad => {
+            if (!initialStyleNames.has(ad.styleName)) {
+                // This was likely a suggested style, but we don't have its prompt.
+                // We'll create a placeholder. A more robust solution might save prompts too.
+                allStyles.push({ 
+                    name: ad.styleName,
+                    description: "Custom style from history.",
+                    prompt: `A custom ad style named ${ad.styleName}.`, // Placeholder prompt
+                    isSuggested: true 
+                });
+            }
+        });
+        setStyles(allStyles);
+        
+        setIsHistoryPanelOpen(false);
+        setError(null);
+    }, [history]);
+
+    const handleClearHistory = useCallback(() => {
+        setHistory([]);
+    }, [setHistory]);
+
+    useEffect(() => {
+        const activeGenerations = Array.from(generatedAds.values()).some(v => v === null);
+        const allGenerated = Array.from(generatedAds.keys()).length > 0 && !activeGenerations;
+        
+        setIsAnyGenerationActive(activeGenerations);
+
+    }, [generatedAds]);
+
+    const successfullyGeneratedCount = Array.from(generatedAds.values()).filter(v => v).length;
+    
     return (
         <div className="bg-slate-900 min-h-screen text-white p-4 sm:p-8">
             <div className="max-w-7xl mx-auto">
-                <header className="text-center mb-10">
-                    <h1 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-purple-400 to-indigo-500 text-transparent bg-clip-text">
-                        AI eBay Ad Generator
-                    </h1>
-                    <p className="text-slate-400 mt-2 text-lg">
-                        Turn your product photo and description into professional ad styles.
-                    </p>
+                <header className="flex justify-between items-center text-center mb-10">
+                    <div className="flex-1 text-center">
+                        <h1 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-purple-400 to-indigo-500 text-transparent bg-clip-text">
+                            AI eBay Ad Generator
+                        </h1>
+                        <p className="text-slate-400 mt-2 text-lg">
+                            Turn your product photo and description into professional ad styles.
+                        </p>
+                    </div>
+                     <button
+                        onClick={() => setIsHistoryPanelOpen(true)}
+                        className="p-2 rounded-full bg-slate-800/50 hover:bg-slate-700/80 transition-colors"
+                        aria-label="Open history panel"
+                    >
+                        <HistoryIcon className="w-6 h-6 text-slate-300" />
+                    </button>
                 </header>
 
-                <main className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
+                <main className="grid grid-cols-1 md:grid-cols-5 gap-8 lg:gap-12">
                     {/* Input Section */}
-                    <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700 flex flex-col gap-6">
+                    <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700 flex flex-col gap-6 md:col-span-2">
                         <div>
                             <label className="block text-md font-medium text-slate-200 mb-3">
                                 1. Product Image
@@ -246,8 +419,18 @@ const App: React.FC = () => {
                             />
                         </div>
                         
-                        <div className="mt-auto pt-6">
-                             {error && <p className="text-red-400 text-sm mb-4 text-center">{error}</p>}
+                        <div className="mt-auto pt-6 space-y-4">
+                             {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+                            
+                             {successfullyGeneratedCount > 0 && (
+                                <button
+                                    onClick={handleSaveToHistory}
+                                    className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-indigo-500/50"
+                                >
+                                    <SaveIcon className="w-5 h-5" />
+                                    Save to History
+                                </button>
+                            )}
                             
                             {successfullyGeneratedCount > 0 && (
                                 <button
@@ -263,16 +446,15 @@ const App: React.FC = () => {
                     </div>
 
                     {/* Output Section */}
-                    <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700">
-                        <h2 className="text-lg font-semibold text-slate-300 mb-4 text-center">
-                            Click a Style to Generate
-                        </h2>
+                    <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800 md:col-span-3">
                         <GeneratedAd 
-                            styles={STYLES}
+                            styles={styles}
                             onGenerateStyle={handleGenerateStyle}
                             imageUrls={generatedAds} 
                             onPreview={handlePreview} 
                             isActionable={!!productDescription && !!productImageFile}
+                            onSuggestStyles={handleSuggestStyles}
+                            isSuggestingStyles={isSuggestingStyles}
                         />
                     </div>
                 </main>
@@ -281,7 +463,14 @@ const App: React.FC = () => {
                     <p>Powered by Google Gemini. For demonstration purposes only.</p>
                 </footer>
             </div>
-            <AdPreviewModal imageUrl={selectedAdUrl} onClose={() => setSelectedAdUrl(null)} />
+            <AdPreviewModal selectedAd={selectedAd} onClose={() => setSelectedAd(null)} />
+            <HistoryPanel 
+                isOpen={isHistoryPanelOpen}
+                onClose={() => setIsHistoryPanelOpen(false)}
+                historyItems={history}
+                onLoadItem={handleLoadHistoryItem}
+                onClearHistory={handleClearHistory}
+            />
         </div>
     );
 };

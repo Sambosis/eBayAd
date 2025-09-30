@@ -3,14 +3,18 @@ import React from 'react';
 interface Style {
     name: string;
     description: string;
+    prompt: string;
+    isSuggested?: boolean;
 }
 
 interface GeneratedAdProps {
     styles: Style[];
     onGenerateStyle: (styleName: string) => void;
     imageUrls: Map<string, string | null>;
-    onPreview: (url: string) => void;
+    onPreview: (url: string, styleName: string) => void;
     isActionable: boolean;
+    onSuggestStyles: () => void;
+    isSuggestingStyles: boolean;
 }
 
 // Icon Components
@@ -23,6 +27,25 @@ const PlayfulIcon = ({ className = '' }) => <svg className={className} xmlns="ht
 const VintageIcon = ({ className = '' }) => <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" /></svg>;
 const LineArtIcon = ({ className = '' }) => <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M15.042 21.672L13.684 16.6m0 0l-2.51 2.225.569-9.47 5.227 7.917-3.286-.672zm-7.518-.267A8.25 8.25 0 1120.25 10.5M8.288 14.212A5.25 5.25 0 1117.25 10.5" /></svg>;
 const RetroFuturismIcon = ({ className = '' }) => <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.82m5.84-2.56a12.022 12.022 0 00-5.84-2.56m0 0a12.022 12.022 0 01-5.84 2.56m5.84-2.56V4.5a2.25 2.25 0 00-2.25-2.25h-1.5a2.25 2.25 0 00-2.25 2.25v2.25m12 6.042a12.022 12.022 0 00-5.84-2.56m5.84 2.56V18.75a2.25 2.25 0 01-2.25 2.25h-1.5a2.25 2.25 0 01-2.25-2.25V14.37z" /></svg>;
+const SparklesIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.898 20.562L16.25 22.5l-.648-1.938a2.25 2.25 0 01-1.476-1.476L12 18.75l1.938-.648a2.25 2.25 0 011.476-1.476L17.5 15.75l.648 1.938a2.25 2.25 0 011.476 1.476L21.25 19.5l-1.938.648a2.25 2.25 0 01-1.476 1.476z" />
+    </svg>
+);
+const LightbulbIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.311l-3.75 0M12 3c-3.866 0-7 3.134-7 7a7.004 7.004 0 004.5 6.545M12 3v5.25m0 0c-1.381 0-2.5 1.119-2.5 2.5s1.119 2.5 2.5 2.5 2.5-1.119 2.5-2.5S13.381 8.25 12 8.25z" />
+    </svg>
+);
+
+
+const SpinnerIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg className={`animate-spin ${className}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    </svg>
+);
+
 
 const styleIconMap: { [key: string]: React.FC<{ className?: string }> } = {
     "Modern & Spec Driven": ModernIcon,
@@ -37,69 +60,129 @@ const styleIconMap: { [key: string]: React.FC<{ className?: string }> } = {
 };
 
 
-const GeneratedAd: React.FC<GeneratedAdProps> = ({ styles, onGenerateStyle, imageUrls, onPreview, isActionable }) => {
+const GeneratedAd: React.FC<GeneratedAdProps> = ({ styles, onGenerateStyle, imageUrls, onPreview, isActionable, onSuggestStyles, isSuggestingStyles }) => {
     return (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            {styles.map((style) => {
-                const imageUrl = imageUrls.get(style.name);
-                const isGenerating = imageUrls.has(style.name) && imageUrl === null;
+        <>
+            <div className="text-center mb-4">
+                <h2 className="text-lg font-semibold text-slate-500">
+                    Click a Style to Generate
+                </h2>
+                <button
+                    onClick={onSuggestStyles}
+                    disabled={!isActionable || isSuggestingStyles}
+                    className="mt-2 inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700/80 disabled:bg-slate-800/50 disabled:cursor-not-allowed text-indigo-300 font-semibold py-2 px-4 rounded-lg transition-all duration-300 ease-in-out text-sm"
+                >
+                    {isSuggestingStyles ? (
+                        <>
+                            <SpinnerIcon className="w-4 h-4" />
+                            Suggesting...
+                        </>
+                    ) : (
+                        <>
+                            <LightbulbIcon className="w-4 h-4" />
+                            Suggest Styles with AI
+                        </>
+                    )}
+                </button>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                {styles.map((style) => {
+                    const imageUrl = imageUrls.get(style.name);
+                    const isGenerating = imageUrls.has(style.name) && imageUrl === null;
 
-                const IconComponent = styleIconMap[style.name] || ModernIcon; // Default icon
+                    const IconComponent = style.isSuggested ? SparklesIcon : (styleIconMap[style.name] || SparklesIcon);
 
-                return (
-                    <div
-                        key={style.name}
-                        className={`relative aspect-square bg-slate-900 rounded-lg overflow-hidden border border-slate-700 transition-all duration-300 group
-                            ${isActionable && !imageUrl && !isGenerating ? 'cursor-pointer hover:border-indigo-500 hover:scale-[1.03]' : 'cursor-default'}
-                            ${!isActionable && 'opacity-50'}
-                        `}
-                        onClick={() => {
-                            if (isActionable && !imageUrl && !isGenerating) {
-                                onGenerateStyle(style.name);
-                            } else if (imageUrl) {
-                                onPreview(imageUrl);
-                            }
-                        }}
-                        onKeyDown={(e) => {
-                             if (e.key === 'Enter' || e.key === ' ') {
+                    return (
+                        <div
+                            key={style.name}
+                            className={`relative aspect-square bg-slate-900 rounded-lg overflow-hidden border border-slate-700 transition-all duration-300 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-slate-900                            ${isActionable && !imageUrl && !isGenerating ? 'cursor-pointer hover:border-indigo-500 hover:scale-[1.03]' : 'cursor-default'}
+                                ${!isActionable && 'opacity-50'}
+                            `}
+                            onClick={() => {
                                 if (isActionable && !imageUrl && !isGenerating) {
                                     onGenerateStyle(style.name);
                                 } else if (imageUrl) {
-                                    onPreview(imageUrl);
+                                    onPreview(imageUrl, style.name);
                                 }
-                             }
-                        }}
-                        aria-label={imageUrl ? `Preview ad in ${style.name} style` : `Generate ad in ${style.name} style`}
-                        role="button"
-                        tabIndex={isActionable && !isGenerating ? 0 : -1}
-                    >
-                        {isGenerating && (
-                            // Skeleton Loader
-                            <div className="absolute inset-0 bg-slate-800 animate-pulse"></div>
-                        )}
-
-                        {imageUrl && (
-                            // Generated Image
-                            <>
-                                <img src={imageUrl} alt={`Generated ad in ${style.name} style`} className="w-full h-full object-cover" />
-                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                    <p className="text-white font-bold text-lg">Preview</p>
+                            }}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                    if (isActionable && !imageUrl && !isGenerating) {
+                                        onGenerateStyle(style.name);
+                                    } else if (imageUrl) {
+                                        onPreview(imageUrl, style.name);
+                                    }
+                                }
+                            }}
+                            aria-label={imageUrl ? `Preview ad in ${style.name} style` : `Generate ad in ${style.name} style`}
+                            role="button"
+                            tabIndex={isActionable && !isGenerating ? 0 : -1}
+                        >
+                            {style.isSuggested && (
+                                <div className="absolute top-2 right-2 z-10 bg-indigo-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg">
+                                    AI
                                 </div>
-                            </>
-                        )}
-                        
-                        {!imageUrl && !isGenerating && (
-                            // Placeholder
-                            <div className="absolute inset-0 bg-slate-900/50 flex flex-col items-center justify-center text-center p-3 sm:p-4 text-slate-300">
-                                <IconComponent className="w-8 h-8 mb-2 text-slate-400 flex-shrink-0" />
-                                <h3 className="font-semibold text-sm sm:text-base leading-tight text-white">{style.name}</h3>
-                                <p className="text-xs sm:text-sm text-slate-400 mt-1">{style.description}</p>
-                            </div>
-                        )}
-                    </div>
-                );
-            })}
-        </div>
+                            )}
+
+                            {isGenerating && (
+                                <div className="absolute inset-0 bg-slate-800 animate-pulse flex items-center justify-center">
+                                    <SpinnerIcon className="w-8 h-8 text-slate-400" />
+                                </div>
+                            )}
+
+                            {imageUrl && (
+                                // Generated Image
+                                <>
+                                    <img src={imageUrl} alt={`Generated ad in ${style.name} style`} className="w-full h-full object-cover" />
+                                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                        <p className="text-white font-bold text-lg">Preview</p>
+                                    </div>
+                                </>
+                            )}
+                            
+                            {!imageUrl && !isGenerating && (
+                                // Placeholder
+                                <div className="absolute inset-0 bg-slate-900/50 flex flex-col items-center justify-center text-center p-3 sm:p-4 text-slate-300">
+                                    <div className="absolute inset-0 overflow-hidden rounded-lg">
+                                        <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-900" />
+                                        <div className="absolute inset-0 opacity-70 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.4),_transparent_60%)]" />
+                                        <div className="absolute inset-0 opacity-50 bg-[radial-gradient(circle_at_bottom,_rgba(14,165,233,0.25),_transparent_65%)]" />
+
+                                        <div className="relative z-10 flex h-full flex-col justify-between p-4 sm:p-5 text-left">
+                                            <div className="flex items-start gap-3">
+                                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 ring-1 ring-white/10 shadow-lg shadow-indigo-500/10">
+                                                    <IconComponent className="h-6 w-6 text-indigo-300" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-[0.65rem] uppercase tracking-[0.35em] text-indigo-200/80">Ad Style</p>
+                                                    <h3 className="mt-1 text-base sm:text-lg font-semibold leading-tight text-white">{style.name}</h3>
+                                                </div>
+                                            </div>
+
+                                            <div className="mt-4 flex-1 overflow-hidden">
+                                                <p className="h-full text-sm leading-relaxed text-slate-200 sm:text-[0.95rem] [mask-image:linear-gradient(to_bottom,rgba(0,0,0,1),rgba(0,0,0,0.75)_70%,rgba(0,0,0,0)_100%)]">
+                                                    {style.description}
+                                                </p>
+                                            </div>
+
+                                            <div className="mt-5 flex items-center justify-between text-[0.65rem] font-semibold uppercase tracking-[0.45em] text-slate-300">
+                                                <span>{isActionable ? 'Ready to Generate' : 'Unavailable'}</span>
+                                                {isActionable && (
+                                                    <span className="flex items-center gap-2 text-indigo-300">
+                                                        <span className="inline-flex h-2 w-2 animate-pulse rounded-full bg-indigo-300" />
+                                                        Preview
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+        </>
     );
 };
 
