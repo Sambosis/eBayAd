@@ -70,69 +70,78 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageChange, imagePrevi
         setIsCameraOpen(true);
     };
     
+    const handleCloseCamera = useCallback(() => {
+        setIsCameraOpen(false);
+    }, []);
+
     useEffect(() => {
         if (!isCameraOpen) {
-            if (streamRef.current) {
-                streamRef.current.getTracks().forEach(track => track.stop());
-                streamRef.current = null;
-            }
             return;
         }
 
-        let isMounted = true;
-        setCameraError(null);
-        
-        const startStream = async () => {
+        let isCancelled = false;
+        let localStream: MediaStream | null = null;
+
+        const startCamera = async () => {
+            // Defensively stop any lingering stream
+            if (streamRef.current) {
+                streamRef.current.getTracks().forEach(track => track.stop());
+            }
+            streamRef.current = null;
+            setCameraError(null);
+
             try {
                 if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
                     throw new Error("Camera not supported on this device or browser.");
                 }
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-                
-                if (isMounted) {
-                    streamRef.current = stream;
-                    if (videoRef.current) {
-                        videoRef.current.srcObject = stream;
-                    }
-                } else {
-                    stream.getTracks().forEach(track => track.stop());
+
+                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+
+                if (isCancelled) {
+                    localStream.getTracks().forEach(track => track.stop());
+                    return;
+                }
+
+                streamRef.current = localStream;
+                if (videoRef.current) {
+                    videoRef.current.srcObject = localStream;
                 }
             } catch (err) {
-                 if (!isMounted) return;
-                 console.error("Error accessing camera:", err);
-                 let message = "Could not access camera. Please check permissions.";
-                    if (err instanceof DOMException) {
-                        if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
-                            message = "Camera access denied. Please allow camera permission in your browser settings.";
-                        } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
-                            message = "No camera could be found on your device.";
-                        } else if (err.name === "NotReadableError" || err.name === "TrackStartError") {
-                            message = "Could not start video source. Your camera might be in use by another application or tab.";
-                        } else {
-                            message = `An unknown camera error occurred: ${err.name}`;
-                        }
-                    } else if (err instanceof Error) {
-                        message = err.message;
+                if (isCancelled) return;
+                
+                console.error("Error accessing camera:", err);
+                let message = "Could not access camera. Please check permissions.";
+                if (err instanceof DOMException) {
+                    if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+                        message = "Camera access denied. Please allow camera permission in your browser settings.";
+                    } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+                        message = "No camera could be found on your device.";
+                    } else if (err.name === "NotReadableError" || err.name === "TrackStartError") {
+                        message = "Could not start video source. Your camera might be in use by another application or tab.";
+                    } else {
+                        message = `An unknown camera error occurred: ${err.name}`;
                     }
-                    setCameraError(message);
-                    setIsCameraOpen(false);
+                } else if (err instanceof Error) {
+                    message = err.message;
+                }
+                setCameraError(message);
+                handleCloseCamera();
             }
         };
 
-        startStream();
+        startCamera();
 
         return () => {
-            isMounted = false;
+            isCancelled = true;
             if (streamRef.current) {
                 streamRef.current.getTracks().forEach(track => track.stop());
                 streamRef.current = null;
             }
+            if (localStream) {
+                 localStream.getTracks().forEach(track => track.stop());
+            }
         };
-    }, [isCameraOpen]);
-    
-    const handleCloseCamera = useCallback(() => {
-        setIsCameraOpen(false);
-    }, []);
+    }, [isCameraOpen, handleCloseCamera]);
     
     const handleCapture = useCallback(() => {
         if (!videoRef.current || !canvasRef.current) return;
