@@ -7,26 +7,70 @@ interface ImageUploaderProps {
 }
 
 const UploadIcon: React.FC<{ className?: string }> = ({ className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+    <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        strokeWidth={1.5}
+        stroke="currentColor"
+        className={className}
+    >
+        <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
+        />
     </svg>
 );
 
 const CameraIcon: React.FC<{ className?: string }> = ({ className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.776 48.776 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
+    <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        strokeWidth={1.5}
+        stroke="currentColor"
+        className={className}
+    >
+        <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.776 48.776 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"
+        />
+        <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z"
+        />
     </svg>
 );
 
 const PhotoIcon: React.FC<{ className?: string }> = ({ className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+    <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        strokeWidth={1.5}
+        stroke="currentColor"
+        className={className}
+    >
+        <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
+        />
     </svg>
 );
 
 const CloseIcon: React.FC<{ className?: string }> = ({ className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+    <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        strokeWidth={1.5}
+        stroke="currentColor"
+        className={className}
+    >
         <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
     </svg>
 );
@@ -48,7 +92,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageChange, imagePrevi
     };
     
     const handleUploaderClick = () => {
-        if (disabled || imagePreviewUrl) return;
+        if (disabled) return;
         setIsChoiceModalOpen(true);
     };
     
@@ -67,11 +111,19 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageChange, imagePrevi
 
     const handleOpenCamera = () => {
         setIsChoiceModalOpen(false);
+        setCameraError(null);
         setIsCameraOpen(true);
     };
-    
+
     const handleCloseCamera = useCallback(() => {
         setIsCameraOpen(false);
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(track => track.stop());
+            streamRef.current = null;
+        }
+        if (videoRef.current) {
+            videoRef.current.srcObject = null;
+        }
     }, []);
 
     useEffect(() => {
@@ -95,7 +147,12 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageChange, imagePrevi
                     throw new Error("Camera not supported on this device or browser.");
                 }
 
-                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                localStream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: { ideal: 'environment' },
+                    },
+                    audio: false,
+                });
 
                 if (isCancelled) {
                     localStream.getTracks().forEach(track => track.stop());
@@ -108,7 +165,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageChange, imagePrevi
                 }
             } catch (err) {
                 if (isCancelled) return;
-                
+
                 console.error("Error accessing camera:", err);
                 let message = "Could not access camera. Please check permissions.";
                 if (err instanceof DOMException) {
@@ -124,8 +181,18 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageChange, imagePrevi
                 } else if (err instanceof Error) {
                     message = err.message;
                 }
+                if (localStream) {
+                    localStream.getTracks().forEach(track => track.stop());
+                    localStream = null;
+                }
+                if (streamRef.current) {
+                    streamRef.current.getTracks().forEach(track => track.stop());
+                    streamRef.current = null;
+                }
+                if (videoRef.current) {
+                    videoRef.current.srcObject = null;
+                }
                 setCameraError(message);
-                handleCloseCamera();
             }
         };
 
@@ -185,11 +252,10 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageChange, imagePrevi
             <div 
                 onClick={handleUploaderClick}
                 className={`relative w-full aspect-video bg-slate-900 border-2 border-dashed border-slate-600 rounded-lg flex items-center justify-center overflow-hidden transition-colors duration-300
-                    ${disabled ? 'cursor-not-allowed opacity-70' : ''}
-                    ${!imagePreviewUrl && !disabled ? 'cursor-pointer hover:border-indigo-500' : 'cursor-default'}
+                    ${disabled ? 'cursor-not-allowed opacity-70' : 'cursor-pointer hover:border-indigo-500'}
                 `}
                 role="button"
-                aria-label={imagePreviewUrl ? "Product image preview" : "Upload product image"}
+                aria-label={imagePreviewUrl ? "Change product image" : "Upload product image"}
                 tabIndex={disabled ? -1 : 0}
                 onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
@@ -202,7 +268,8 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageChange, imagePrevi
                     type="file"
                     ref={fileInputRef}
                     onChange={handleFileChange}
-                    accept="image/png, image/jpeg, image/webp"
+                    accept="image/png, image/jpeg, image/webp, image/*"
+                    capture="environment"
                     className="hidden"
                     disabled={disabled}
                 />
@@ -278,12 +345,18 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageChange, imagePrevi
                         <CloseIcon className="w-6 h-6" />
                     </button>
                     <div className="absolute bottom-8 z-10">
-                         <button
+                        <button
                             onClick={handleCapture}
-                            className="w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm border-4 border-white ring-4 ring-black/20 flex items-center justify-center transition-transform hover:scale-105"
+                            className={`w-20 h-20 rounded-full backdrop-blur-sm border-4 ring-4 flex items-center justify-center transition-transform
+                                ${cameraError
+                                    ? 'bg-white/10 border-white/40 ring-red-400/40 cursor-not-allowed'
+                                    : 'bg-white/20 border-white ring-black/20 hover:scale-105'
+                                }
+                            `}
                             aria-label="Take picture"
+                            disabled={!!cameraError}
                         >
-                            <div className="w-16 h-16 rounded-full bg-white"></div>
+                            <div className={`w-16 h-16 rounded-full ${cameraError ? 'bg-white/40' : 'bg-white'}`}></div>
                         </button>
                     </div>
                 </div>
