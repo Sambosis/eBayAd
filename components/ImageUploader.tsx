@@ -19,6 +19,12 @@ const CameraIcon: React.FC<{ className?: string }> = ({ className }) => (
     </svg>
 );
 
+const PhotoIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+    </svg>
+);
+
 const CloseIcon: React.FC<{ className?: string }> = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -31,6 +37,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageChange, imagePrevi
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const streamRef = useRef<MediaStream | null>(null);
 
+    const [isChoiceModalOpen, setIsChoiceModalOpen] = useState(false);
     const [isCameraOpen, setIsCameraOpen] = useState(false);
     const [cameraError, setCameraError] = useState<string | null>(null);
 
@@ -39,36 +46,61 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageChange, imagePrevi
         const file = event.target.files?.[0] || null;
         onImageChange(file);
     };
+    
+    const handleUploaderClick = () => {
+        if (disabled || imagePreviewUrl) return;
+        setIsChoiceModalOpen(true);
+    };
+    
+    const handleClearImage = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        onImageChange(null);
+        if(fileInputRef.current) {
+            fileInputRef.current.value = "";
+        }
+    }
 
-    const handleClick = () => {
-        if (disabled) return;
+    const handleChooseFile = () => {
+        setIsChoiceModalOpen(false);
         fileInputRef.current?.click();
     };
 
-    // Effect to manage the camera stream lifecycle based on isCameraOpen state
+    const handleOpenCamera = () => {
+        setIsChoiceModalOpen(false);
+        setIsCameraOpen(true);
+    };
+    
     useEffect(() => {
-        const stopStream = () => {
+        if (!isCameraOpen) {
             if (streamRef.current) {
                 streamRef.current.getTracks().forEach(track => track.stop());
                 streamRef.current = null;
             }
-        };
+            return;
+        }
 
-        if (isCameraOpen) {
-            setCameraError(null);
-            const startStream = async () => {
-                try {
-                    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                        throw new Error("Camera not supported on this device or browser.");
-                    }
-                    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        let isMounted = true;
+        setCameraError(null);
+        
+        const startStream = async () => {
+            try {
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    throw new Error("Camera not supported on this device or browser.");
+                }
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                
+                if (isMounted) {
                     streamRef.current = stream;
                     if (videoRef.current) {
                         videoRef.current.srcObject = stream;
                     }
-                } catch (err) {
-                    console.error("Error accessing camera:", err);
-                    let message = "Could not access camera. Please check permissions.";
+                } else {
+                    stream.getTracks().forEach(track => track.stop());
+                }
+            } catch (err) {
+                 if (!isMounted) return;
+                 console.error("Error accessing camera:", err);
+                 let message = "Could not access camera. Please check permissions.";
                     if (err instanceof DOMException) {
                         if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
                             message = "Camera access denied. Please allow camera permission in your browser settings.";
@@ -83,25 +115,21 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageChange, imagePrevi
                         message = err.message;
                     }
                     setCameraError(message);
-                    setIsCameraOpen(false); // Close modal on error to prevent broken state
-                }
-            };
-            
-            startStream();
+                    setIsCameraOpen(false);
+            }
+        };
 
-            // Cleanup function to stop the stream when the effect unmounts or isCameraOpen becomes false
-            return () => {
-                stopStream();
-            };
-        }
+        startStream();
+
+        return () => {
+            isMounted = false;
+            if (streamRef.current) {
+                streamRef.current.getTracks().forEach(track => track.stop());
+                streamRef.current = null;
+            }
+        };
     }, [isCameraOpen]);
     
-    const handleOpenCamera = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        if (disabled) return;
-        setIsCameraOpen(true);
-    };
-
     const handleCloseCamera = useCallback(() => {
         setIsCameraOpen(false);
     }, []);
@@ -130,26 +158,36 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageChange, imagePrevi
         }, 'image/jpeg');
     }, [onImageChange, handleCloseCamera]);
 
-    // Effect to handle Escape key press for closing the camera modal
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
-            if (event.key === 'Escape' && isCameraOpen) {
-                handleCloseCamera();
+            if (event.key === 'Escape') {
+                if(isCameraOpen) handleCloseCamera();
+                if(isChoiceModalOpen) setIsChoiceModalOpen(false);
             }
         };
         document.addEventListener('keydown', handleKeyDown);
         return () => {
             document.removeEventListener('keydown', handleKeyDown);
         };
-    }, [isCameraOpen, handleCloseCamera]);
+    }, [isCameraOpen, isChoiceModalOpen, handleCloseCamera]);
     
     return (
         <>
             <div 
-                onClick={handleClick}
+                onClick={handleUploaderClick}
                 className={`relative w-full aspect-video bg-slate-900 border-2 border-dashed border-slate-600 rounded-lg flex items-center justify-center overflow-hidden transition-colors duration-300
-                    ${disabled ? 'cursor-not-allowed opacity-70' : 'cursor-pointer hover:border-indigo-500'}
+                    ${disabled ? 'cursor-not-allowed opacity-70' : ''}
+                    ${!imagePreviewUrl && !disabled ? 'cursor-pointer hover:border-indigo-500' : 'cursor-default'}
                 `}
+                role="button"
+                aria-label={imagePreviewUrl ? "Product image preview" : "Upload product image"}
+                tabIndex={disabled ? -1 : 0}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleUploaderClick();
+                    }
+                }}
             >
                 <input
                     type="file"
@@ -160,29 +198,65 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageChange, imagePrevi
                     disabled={disabled}
                 />
                 {imagePreviewUrl ? (
-                    <img src={imagePreviewUrl} alt="Product Preview" className="w-full h-full object-contain" />
+                    <>
+                        <img src={imagePreviewUrl} alt="Product Preview" className="w-full h-full object-contain" />
+                        {!disabled && (
+                            <button
+                                onClick={handleClearImage}
+                                className="absolute top-2 right-2 p-1.5 bg-slate-900/60 rounded-full text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all z-10"
+                                aria-label="Remove image"
+                            >
+                                <CloseIcon className="w-5 h-5" />
+                            </button>
+                        )}
+                    </>
                 ) : (
-                    <div className="text-center text-slate-500 flex flex-col items-center">
+                    <div className="text-center text-slate-500 flex flex-col items-center pointer-events-none">
                         <UploadIcon className="w-8 h-8 mx-auto mb-2" />
-                        <p className="font-semibold">Click to upload image</p>
-                        <p className="text-xs">PNG, JPG, or WEBP</p>
-                        <div className="my-3 flex items-center w-3/4 mx-auto">
-                            <div className="flex-grow border-t border-slate-700"></div>
-                            <span className="flex-shrink mx-2 text-slate-500 text-xs">OR</span>
-                            <div className="flex-grow border-t border-slate-700"></div>
-                        </div>
-                        <button
-                           onClick={handleOpenCamera}
-                           disabled={disabled}
-                           className="inline-flex items-center gap-2 bg-slate-700/50 hover:bg-slate-700 text-slate-300 font-semibold py-1.5 px-3 rounded-md text-sm transition-colors"
-                        >
-                           <CameraIcon className="w-4 h-4" />
-                           Use Camera
-                        </button>
+                        <p className="font-semibold">Upload Product Image</p>
+                        <p className="text-xs">Click to choose from library or use camera</p>
                     </div>
                 )}
             </div>
             
+            {isChoiceModalOpen && (
+                <div 
+                    className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+                    onClick={() => setIsChoiceModalOpen(false)}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="image-source-title"
+                >
+                    <div 
+                        className="bg-slate-800 rounded-xl shadow-lg w-full max-w-sm"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="p-5 border-b border-slate-700 flex justify-between items-center">
+                            <h3 id="image-source-title" className="font-semibold text-lg text-white">Choose Image Source</h3>
+                            <button onClick={() => setIsChoiceModalOpen(false)} className="p-1 rounded-full text-slate-400 hover:bg-slate-700 hover:text-white transition-colors" aria-label="Close">
+                                <CloseIcon className="w-6 h-6" />
+                            </button>
+                        </div>
+                        <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <button
+                                onClick={handleChooseFile}
+                                className="flex flex-col items-center justify-center gap-3 p-6 bg-slate-700/50 hover:bg-slate-700 rounded-lg text-slate-200 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-slate-800"
+                            >
+                                <PhotoIcon className="w-10 h-10 text-indigo-400"/>
+                                <span className="font-semibold">From Library</span>
+                            </button>
+                            <button
+                                onClick={handleOpenCamera}
+                                className="flex flex-col items-center justify-center gap-3 p-6 bg-slate-700/50 hover:bg-slate-700 rounded-lg text-slate-200 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-slate-800"
+                            >
+                                <CameraIcon className="w-10 h-10 text-indigo-400"/>
+                                <span className="font-semibold">Use Camera</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {isCameraOpen && (
                 <div className="fixed inset-0 bg-black z-50 flex flex-col items-center justify-center p-4">
                     <video ref={videoRef} autoPlay playsInline className="w-full h-full object-contain absolute inset-0"></video>
