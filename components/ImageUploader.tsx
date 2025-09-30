@@ -77,6 +77,7 @@ const CloseIcon: React.FC<{ className?: string }> = ({ className }) => (
 
 const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageChange, imagePreviewUrl, disabled = false }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const cameraFileInputRef = useRef<HTMLInputElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const streamRef = useRef<MediaStream | null>(null);
@@ -99,8 +100,11 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageChange, imagePrevi
     const handleClearImage = (e: React.MouseEvent) => {
         e.stopPropagation();
         onImageChange(null);
-        if(fileInputRef.current) {
+        if (fileInputRef.current) {
             fileInputRef.current.value = "";
+        }
+        if (cameraFileInputRef.current) {
+            cameraFileInputRef.current.value = "";
         }
     }
 
@@ -112,6 +116,17 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageChange, imagePrevi
     const handleOpenCamera = () => {
         setIsChoiceModalOpen(false);
         setCameraError(null);
+        const canUseMediaStream =
+            typeof window !== 'undefined' &&
+            window.isSecureContext &&
+            typeof navigator !== 'undefined' &&
+            !!navigator.mediaDevices?.getUserMedia;
+
+        if (!canUseMediaStream) {
+            cameraFileInputRef.current?.click();
+            return;
+        }
+
         setIsCameraOpen(true);
     };
 
@@ -267,6 +282,14 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageChange, imagePrevi
                 <input
                     type="file"
                     ref={fileInputRef}
+                    onChange={handleFileChange}
+                    accept="image/png, image/jpeg, image/webp, image/*"
+                    className="hidden"
+                    disabled={disabled}
+                />
+                <input
+                    type="file"
+                    ref={cameraFileInputRef}
                     onChange={handleFileChange}
                     accept="image/png, image/jpeg, image/webp, image/*"
                     capture="environment"
