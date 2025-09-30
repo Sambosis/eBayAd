@@ -1,9 +1,9 @@
-
 import React, { useRef } from 'react';
 
 interface ImageUploaderProps {
     onImageChange: (file: File | null) => void;
     imagePreviewUrl: string | null;
+    disabled?: boolean;
 }
 
 const UploadIcon: React.FC<{ className?: string }> = ({ className }) => (
@@ -13,22 +13,26 @@ const UploadIcon: React.FC<{ className?: string }> = ({ className }) => (
 );
 
 
-const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageChange, imagePreviewUrl }) => {
+const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageChange, imagePreviewUrl, disabled = false }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        if (disabled) return;
         const file = event.target.files?.[0] || null;
         onImageChange(file);
     };
 
     const handleClick = () => {
+        if (disabled) return;
         fileInputRef.current?.click();
     };
     
     return (
         <div 
             onClick={handleClick}
-            className="relative w-full aspect-video bg-slate-900 border-2 border-dashed border-slate-600 rounded-lg flex items-center justify-center cursor-pointer hover:border-indigo-500 transition-colors duration-300 overflow-hidden"
+            className={`relative w-full aspect-video bg-slate-900 border-2 border-dashed border-slate-600 rounded-lg flex items-center justify-center overflow-hidden transition-colors duration-300
+                ${disabled ? 'cursor-not-allowed opacity-70' : 'cursor-pointer hover:border-indigo-500'}
+            `}
         >
             <input
                 type="file"
@@ -36,6 +40,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageChange, imagePrevi
                 onChange={handleFileChange}
                 accept="image/png, image/jpeg, image/webp"
                 className="hidden"
+                disabled={disabled}
             />
             {imagePreviewUrl ? (
                 <img src={imagePreviewUrl} alt="Product Preview" className="w-full h-full object-contain" />

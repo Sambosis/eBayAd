@@ -1,4 +1,4 @@
-import { GoogleGenAI, Modality } from "@google/genai";
+import { GoogleGenAI, Modality, Type } from "@google/genai";
 
 const PROMPT_TEMPLATE = (description: string, style: string) => `
 You are a professional graphic designer specializing in e-commerce product advertisements.
@@ -19,48 +19,75 @@ Product Description: "${description}"
 8.  **Final Output:** The final image should be a single, cohesive advertisement graphic ready for an eBay listing. It should look polished and trustworthy.
 `;
 
-const DESCRIPTION_PROMPT_TEMPLATE = (productName: string) => `
-You are an expert eBay seller with years of experience in writing compelling product descriptions that sell.
-Your task is to generate a detailed, well-structured, and persuasive product description for an eBay listing.
+const INFO_FROM_IMAGE_PROMPT = `
+You are an expert product identifier and copywriter.
+Based on the user-uploaded image, your task is to:
+1.  **Identify the Product:** Accurately determine the product's brand, model, and official name. If it's a generic item, provide a clear, descriptive name.
+2.  **Generate a Product Description:** Write a detailed, well-structured, and persuasive product description for an eBay listing.
+    - Use Google Search to find all relevant information about the identified product.
+    - The description must include:
+        - A catchy title as the first line.
+        - An introduction summarizing the product's main benefit.
+        - A bulleted list of key features and specifications.
+        - A statement that the condition is "Brand New".
+        - A list of what's typically included in the box.
+        - A brief mention of the target audience.
+    - **Formatting Rules:**
+        - Use clear headings with markdown (e.g., "**Key Features:**").
+        - Use markdown bullet points (-).
+        - Keep the language professional but easy to understand.
+        - Do not include pricing information.
+        - Base the description strictly on search results.
 
-Use Google Search to find all relevant information about the following product: "${productName}".
-
-Based on your search results, create a description that includes:
-1.  **Catchy Title:** A brief, attention-grabbing title as the first line.
-2.  **Introduction:** A short paragraph summarizing the product and its main benefit.
-3.  **Key Features:** A bulleted list of the most important features and specifications.
-4.  **Condition:** Assume the product is "Brand New" and state this clearly.
-5.  **What's Included:** List what a buyer would typically receive in the box.
-6.  **Target Audience:** Briefly mention who this product is perfect for (e.g., "Ideal for students, professionals, and frequent travelers.").
-
-**Formatting Rules:**
-- Use clear headings with markdown for each section (e.g., "**Key Features:**").
-- Use markdown bullet points (-) for lists.
-- Keep the language professional but easy to understand.
-- Do not include pricing information.
-- Do not make up information. Base the description strictly on the search results.
-
-Generate only the text for the description, starting with the title.
+**Output Format:**
+Return a single JSON object with two keys: "productName" and "productDescription".
+- "productName": A string containing the official product name and model.
+- "productDescription": A string containing the full, markdown-formatted description.
 `;
 
-
-export const generateEbayDescription = async (productName: string): Promise<string> => {
-     if (!process.env.API_KEY) {
+export const generateProductInfoFromImage = async (
+    imageBase64: string,
+    mimeType: string
+): Promise<{ productName: string; productDescription: string }> => {
+    if (!process.env.API_KEY) {
         throw new Error("API_KEY environment variable not set.");
     }
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
-    const prompt = DESCRIPTION_PROMPT_TEMPLATE(productName);
-
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
-        contents: prompt,
+        contents: {
+            parts: [
+                {
+                    inlineData: {
+                        data: imageBase64,
+                        mimeType: mimeType,
+                    },
+                },
+                {
+                    text: INFO_FROM_IMAGE_PROMPT,
+                },
+            ],
+        },
         config: {
             tools: [{googleSearch: {}}],
         },
     });
 
-    return response.text;
+    try {
+        const jsonText = response.text.trim();
+        // The response might be wrapped in markdown, so we need to clean it
+        const cleanedJson = jsonText.replace(/^```json\s*|```$/g, '');
+        const parsed = JSON.parse(cleanedJson);
+        if (parsed.productName && parsed.productDescription) {
+            return parsed;
+        } else {
+             throw new Error("Invalid JSON structure in AI response.");
+        }
+    } catch (e) {
+        console.error("Failed to parse JSON response:", response.text);
+        throw new Error("The AI returned an invalid response. Please try again.");
+    }
 }
 
 
