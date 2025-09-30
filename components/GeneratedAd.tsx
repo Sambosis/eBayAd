@@ -45,17 +45,24 @@ const AdSkeletonLoader: React.FC = () => (
 const GeneratedAd: React.FC<GeneratedAdProps> = ({ imageUrls, onPreview }) => {
     // Initial state before any generation is triggered
     if (!imageUrls) {
+        const placeholders = [
+            { title: "Style 1: Modern", description: "Sleek, clean & spec-focused." },
+            { title: "Style 2: Dynamic", description: "Vibrant, energetic & action-oriented." },
+            { title: "Style 3: Professional", description: "Sophisticated, refined & premium." },
+            { title: "Style 4: Lifestyle", description: "Relatable, aspirational & in-context." },
+            { title: "Style 5: Futuristic", description: "Dark, neon & high-tech." },
+            { title: "Style 6: Playful", description: "Bright, fun & engaging." },
+            { title: "Style 7: Vintage", description: "Nostalgic, timeless & retro." },
+            { title: "Style 8: Line Art", description: "Simple, elegant & artistic." },
+            { title: "Style 9: Retro Future", description: "80s sci-fi, chrome & neon." },
+        ];
         return (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="w-full aspect-video bg-slate-900 rounded-lg flex items-center justify-center overflow-hidden">
-                    <AdPlaceholder title="Style 1: Modern" description="Your clean & elegant ad."/>
-                </div>
-                 <div className="w-full aspect-video bg-slate-900 rounded-lg flex items-center justify-center overflow-hidden">
-                    <AdPlaceholder title="Style 2: Dynamic" description="Your Black & white ad."/>
-                </div>
-                <div className="w-full aspect-video bg-slate-900 rounded-lg flex items-center justify-center overflow-hidden">
-                    <AdPlaceholder title="Style 3: Balanced" description="Your professional ad."/>
-                </div>
+                {placeholders.map((p, i) => (
+                    <div key={i} className="w-full aspect-video bg-slate-900 rounded-lg flex items-center justify-center overflow-hidden">
+                        <AdPlaceholder title={p.title} description={p.description}/>
+                    </div>
+                ))}
             </div>
         );
     }
