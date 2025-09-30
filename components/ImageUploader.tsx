@@ -59,23 +59,36 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageChange, imagePrevi
 
     const handleOpenCamera = useCallback(async (e: React.MouseEvent) => {
         e.stopPropagation();
-        if (disabled || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        if (disabled) return;
+
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
             setCameraError("Camera not supported on this device or browser.");
             return;
         }
+
+        // Always stop any previous stream before starting a new one.
+        stopCameraStream();
+
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
             streamRef.current = stream;
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream;
-            }
             setIsCameraOpen(true);
             setCameraError(null);
         } catch (err) {
             console.error("Error accessing camera:", err);
-            setCameraError("Could not access camera. Please check permissions.");
+            let message = "Could not access camera. Please check permissions.";
+             if (err instanceof DOMException) {
+                if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+                    message = "Camera access denied. Please allow camera permission in your browser settings.";
+                } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+                    message = "No camera could be found on your device.";
+                } else if (err.name === "NotReadableError" || err.name === "TrackStartError") {
+                    message = "Could not start video source. Your camera might be in use by another application or tab.";
+                }
+            }
+            setCameraError(message);
         }
-    }, [disabled]);
+    }, [disabled, stopCameraStream]);
     
     const handleCapture = useCallback(() => {
         if (!videoRef.current || !canvasRef.current) return;
@@ -96,21 +109,27 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageChange, imagePrevi
         }, 'image/jpeg');
     }, [onImageChange, handleCloseCamera]);
 
+    // Effect to attach stream to video element when camera opens
+    useEffect(() => {
+        if (isCameraOpen && videoRef.current && streamRef.current) {
+            videoRef.current.srcObject = streamRef.current;
+        }
+    }, [isCameraOpen]);
+
+
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') {
+            if (event.key === 'Escape' && isCameraOpen) {
                 handleCloseCamera();
             }
         };
-        if (isCameraOpen) {
-            document.addEventListener('keydown', handleKeyDown);
-        }
+        document.addEventListener('keydown', handleKeyDown);
         return () => {
             document.removeEventListener('keydown', handleKeyDown);
         };
     }, [isCameraOpen, handleCloseCamera]);
 
-    // Cleanup effect
+    // Cleanup effect for when the component unmounts
     useEffect(() => {
         return () => {
             stopCameraStream();
