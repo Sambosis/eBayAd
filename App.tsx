@@ -35,16 +35,38 @@ export interface HistoryItem {
 // --- CONSTANTS ---
 
 const DEFAULT_STYLES: Style[] = [
-    { name: "Modern & Spec Driven", description: "A sleek, contemporary aesthetic featuring clean lines, ample white space, and a minimalist design.", prompt: "Modern & Spec Driven: A sleek, contemporary aesthetic featuring clean lines, ample white space, and a minimalist design. Use a professional, sans-serif font. The color palette should be muted, with a single accent color. Clearly list the top 3-4 specifications with icons. The overall mood is high-tech and premium." },
-    { name: "Bold & Dynamic", description: "An energetic and eye-catching design with strong typography, vibrant colors, and dynamic angles.", prompt: "Bold & Dynamic: An energetic and eye-catching design. Use strong, bold typography, vibrant, saturated colors, and dynamic angles or compositions. The background should be abstract or graphic. The goal is to grab attention immediately. The mood is exciting and powerful." },
-    { name: "Elegant & Professional", description: "A sophisticated and luxurious style using serif fonts, a refined color palette, and a balanced, classic layout.", prompt: "Elegant & Professional: A sophisticated and luxurious style. Use classic serif fonts, a refined color palette (e.g., deep blues, gold, charcoal), and a balanced, symmetrical layout. The mood is trustworthy, premium, and high-end." },
-    { name: "Lifestyle & Aspirational", description: "Showcases the product in a real-world, aspirational context, focusing on the user experience and benefits.", prompt: "Lifestyle & Aspirational: Showcases the product in a real-world, aspirational context. The product should be integrated into a scene that evokes a desirable feeling or outcome. Use warm, natural lighting and focus on the user's experience. The mood is relatable and inspiring." },
-    { name: "Tech-Forward & Futuristic", description: "A cutting-edge design with neon accents, dark backgrounds, and digital or circuit-like motifs.", prompt: "Tech-Forward & Futuristic: A cutting-edge design. Use dark backgrounds, neon accents (blues, purples, pinks), and digital or circuit-like graphical elements. Typography should be modern and geometric. The mood is innovative, advanced, and exciting." },
-    { name: "Playful & Colorful", description: "A fun and friendly design using bright colors, rounded shapes, and whimsical illustrations or icons.", prompt: "Playful & Colorful: A fun and friendly design. Use a bright, diverse color palette, rounded shapes, and whimsical, illustrated icons or elements. Typography should be approachable and perhaps slightly quirky. The mood is cheerful, accessible, and energetic." },
-    { name: "Vintage & Nostalgic", description: "A retro-inspired look using textures, muted color palettes, and typography reminiscent of a specific past era.", prompt: "Vintage & Nostalgic: A retro-inspired look. Use textures (like paper or grain), muted color palettes (e.g., sepia, faded tones), and typography reminiscent of a specific past era (e.g., '70s script, '50s sans-serif). The mood is authentic, charming, and nostalgic." },
-    { name: "Minimalist Line Art", description: "A clean and artistic style using simple line drawings and a monochrome color scheme to highlight the product.", prompt: "Minimalist Line Art: A clean, artistic, and modern style. Use simple, single-weight line drawings of the product and related icons. The color scheme should be strictly monochrome or have a single, subtle accent color. The mood is sophisticated, clean, and elegant." },
-    { name: "Retro Futurism", description: "A creative blend of vintage aesthetics with futuristic concepts, often featuring chrome, curves, and a sense of optimism.", prompt: "Retro Futurism: A creative blend of vintage aesthetics (like '50s or '60s design) with futuristic concepts. Think chrome, smooth curves, and atomic-age motifs. The color palette is often optimistic, with teals, oranges, and creams. The mood is imaginative, stylish, and cool." },
+    { 
+        name: "Modern & Minimalist", 
+        description: "A sleek, contemporary aesthetic using clean lines, line art icons, and a focus on key specifications.", 
+        prompt: "Modern & Minimalist: A sleek, contemporary aesthetic featuring clean lines, ample white space, and a minimalist design. Use simple, single-weight line drawings for icons. The color scheme should be strictly monochrome or have a single, subtle accent color. Use a professional, sans-serif font. Clearly list the top 3-4 specifications. The overall mood is sophisticated, high-tech, and premium." 
+    },
+    { 
+        name: "Tech & Dynamic", 
+        description: "An energetic, cutting-edge design with dark backgrounds, neon accents, and bold, geometric typography.", 
+        prompt: "Tech & Dynamic: A cutting-edge and energetic design. Use dark backgrounds, vibrant neon accents (e.g., blues, purples, pinks), and dynamic angles. Typography should be modern, strong, and geometric. Incorporate abstract or circuit-like graphical elements. The mood is innovative, powerful, and exciting." 
+    },
+    { 
+        name: "Elegant & Professional", 
+        description: "A sophisticated and luxurious style using serif fonts, a refined color palette, and a balanced, classic layout.", 
+        prompt: "Elegant & Professional: A sophisticated and luxurious style. Use classic serif fonts, a refined color palette (e.g., deep blues, gold, charcoal), and a balanced, symmetrical layout. The mood is trustworthy, premium, and high-end." 
+    },
+    { 
+        name: "Lifestyle & Aspirational", 
+        description: "Showcases the product in a real-world, aspirational context, focusing on the user experience and benefits.", 
+        prompt: "Lifestyle & Aspirational: Showcases the product in a real-world, aspirational context. The product should be integrated into a scene that evokes a desirable feeling or outcome. Use warm, natural lighting and focus on the user's experience. The mood is relatable and inspiring." 
+    },
+    { 
+        name: "Vintage & Nostalgic", 
+        description: "A retro-inspired look using textures, muted color palettes, and typography reminiscent of a specific past era.", 
+        prompt: "Vintage & Nostalgic: A retro-inspired look. Use textures (like paper or grain), muted color palettes (e.g., sepia, faded tones), and typography reminiscent of a specific past era (e.g., '70s script, '50s sans-serif). The mood is authentic, charming, and nostalgic." 
+    },
+    { 
+        name: "Retro Futurism", 
+        description: "A creative blend of vintage aesthetics with futuristic concepts, often featuring chrome, curves, and a sense of optimism.", 
+        prompt: "Retro Futurism: A creative blend of vintage aesthetics (like '50s or '60s design) with futuristic concepts. Think chrome, smooth curves, and atomic-age motifs. The color palette is often optimistic, with teals, oranges, and creams. The mood is imaginative, stylish, and cool." 
+    },
 ];
+
 
 // --- HELPER FUNCTIONS ---
 
@@ -59,6 +81,13 @@ const fileToBase64 = (file: File): Promise<string> => {
         reader.onerror = error => reject(error);
     });
 };
+
+const LogoIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+    </svg>
+);
+
 
 // --- MAIN APP COMPONENT ---
 
@@ -248,16 +277,21 @@ function App() {
     return (
         <>
             <div className="min-h-screen bg-slate-950 text-slate-100 font-sans">
-                <header className="py-4 px-6 md:px-8 border-b border-slate-800 flex justify-between items-center">
-                    <h1 className="text-xl font-bold text-white tracking-wide">
-                        eBay Ad <span className="text-indigo-400">Generator</span>
-                    </h1>
-                    <button 
-                        onClick={() => setIsHistoryOpen(true)}
-                        className="flex items-center gap-2 text-sm font-semibold text-slate-300 hover:text-white transition-colors"
-                    >
-                         History ({historyItems.length})
-                    </button>
+                <header className="py-4 px-6 md:px-8 border-b border-slate-800 grid grid-cols-3 items-center">
+                    <div className="col-start-2 flex justify-center items-center gap-3">
+                        <LogoIcon className="w-7 h-7 text-indigo-400" />
+                        <h1 className="text-2xl font-bold text-white tracking-tight">
+                            AdSpark <span className="text-indigo-400">AI</span>
+                        </h1>
+                    </div>
+                    <div className="col-start-3 justify-self-end">
+                        <button 
+                            onClick={() => setIsHistoryOpen(true)}
+                            className="flex items-center gap-2 text-sm font-semibold text-slate-300 hover:text-white transition-colors"
+                        >
+                             History ({historyItems.length})
+                        </button>
+                    </div>
                 </header>
 
                 <main className="p-4 md:p-8">
