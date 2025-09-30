@@ -59,8 +59,13 @@ const styleIconMap: { [key: string]: React.FC<{ className?: string }> } = {
     "Retro Futurism": RetroFuturismIcon,
 };
 
+import React, { useState } from 'react';
+
+// ... (keep all your existing interfaces and icon components)
 
 const GeneratedAd: React.FC<GeneratedAdProps> = ({ styles, onGenerateStyle, imageUrls, onPreview, isActionable, onSuggestStyles, isSuggestingStyles }) => {
+    const [hoveredStyle, setHoveredStyle] = useState<string | null>(null);
+
     return (
         <>
             <div className="text-center mb-4">
@@ -89,95 +94,111 @@ const GeneratedAd: React.FC<GeneratedAdProps> = ({ styles, onGenerateStyle, imag
                 {styles.map((style) => {
                     const imageUrl = imageUrls.get(style.name);
                     const isGenerating = imageUrls.has(style.name) && imageUrl === null;
-
                     const IconComponent = style.isSuggested ? SparklesIcon : (styleIconMap[style.name] || SparklesIcon);
 
                     return (
                         <div
                             key={style.name}
-                            className={`relative aspect-square bg-slate-900 rounded-lg overflow-hidden border border-slate-700 transition-all duration-300 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-slate-900                            ${isActionable && !imageUrl && !isGenerating ? 'cursor-pointer hover:border-indigo-500 hover:scale-[1.03]' : 'cursor-default'}
+                            className="relative"
+                            onMouseEnter={() => setHoveredStyle(style.name)}
+                            onMouseLeave={() => setHoveredStyle(null)}
+                        >
+                            {/* Tooltip */}
+                            {hoveredStyle === style.name && !imageUrl && !isGenerating && (
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 w-64 p-3 bg-slate-800 border border-slate-600 rounded-lg shadow-xl">
+                                    <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-slate-800"></div>
+                                    <p className="text-xs font-semibold text-indigo-300 mb-1">{style.name}</p>
+                                    <p className="text-xs text-slate-200 leading-relaxed">{style.description}</p>
+                                </div>
+                            )}
+
+                            <div
+                                className={`relative aspect-square bg-slate-900 rounded-lg overflow-hidden border border-slate-700 transition-all duration-300 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-slate-900
+                                ${isActionable && !imageUrl && !isGenerating ? 'cursor-pointer hover:border-indigo-500 hover:scale-[1.03]' : 'cursor-default'}
                                 ${!isActionable && 'opacity-50'}
                             `}
-                            onClick={() => {
-                                if (isActionable && !imageUrl && !isGenerating) {
-                                    onGenerateStyle(style.name);
-                                } else if (imageUrl) {
-                                    onPreview(imageUrl, style.name);
-                                }
-                            }}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
+                                onClick={() => {
                                     if (isActionable && !imageUrl && !isGenerating) {
                                         onGenerateStyle(style.name);
                                     } else if (imageUrl) {
                                         onPreview(imageUrl, style.name);
                                     }
-                                }
-                            }}
-                            aria-label={imageUrl ? `Preview ad in ${style.name} style` : `Generate ad in ${style.name} style`}
-                            role="button"
-                            tabIndex={isActionable && !isGenerating ? 0 : -1}
-                        >
-                            {style.isSuggested && (
-                                <div className="absolute top-2 right-2 z-10 bg-indigo-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg">
-                                    AI
-                                </div>
-                            )}
-
-                            {isGenerating && (
-                                <div className="absolute inset-0 bg-slate-800 animate-pulse flex items-center justify-center">
-                                    <SpinnerIcon className="w-8 h-8 text-slate-400" />
-                                </div>
-                            )}
-
-                            {imageUrl && (
-                                // Generated Image
-                                <>
-                                    <img src={imageUrl} alt={`Generated ad in ${style.name} style`} className="w-full h-full object-cover" />
-                                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                        <p className="text-white font-bold text-lg">Preview</p>
+                                }}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                        if (isActionable && !imageUrl && !isGenerating) {
+                                            onGenerateStyle(style.name);
+                                        } else if (imageUrl) {
+                                            onPreview(imageUrl, style.name);
+                                        }
+                                    }
+                                }}
+                                aria-label={imageUrl ? `Preview ad in ${style.name} style` : `Generate ad in ${style.name} style`}
+                                role="button"
+                                tabIndex={isActionable && !isGenerating ? 0 : -1}
+                            >
+                                {style.isSuggested && (
+                                    <div className="absolute top-2 right-2 z-10 bg-indigo-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg">
+                                        AI
                                     </div>
-                                </>
-                            )}
-                            
-                            {!imageUrl && !isGenerating && (
-                                // Placeholder
-                                <div className="absolute inset-0 bg-slate-900/50 flex flex-col items-center justify-center text-center p-3 sm:p-4 text-slate-300">
-                                    <div className="absolute inset-0 overflow-hidden rounded-lg">
-                                        <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-900" />
-                                        <div className="absolute inset-0 opacity-70 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.4),_transparent_60%)]" />
-                                        <div className="absolute inset-0 opacity-50 bg-[radial-gradient(circle_at_bottom,_rgba(14,165,233,0.25),_transparent_65%)]" />
+                                )}
 
-                                        <div className="relative z-10 flex h-full flex-col justify-between p-4 sm:p-5 text-left">
-                                            <div className="flex items-start gap-3">
-                                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 ring-1 ring-white/10 shadow-lg shadow-indigo-500/10">
-                                                    <IconComponent className="h-6 w-6 text-indigo-300" />
+                                {isGenerating && (
+                                    <div className="absolute inset-0 bg-slate-800 animate-pulse flex items-center justify-center">
+                                        <SpinnerIcon className="w-8 h-8 text-slate-400" />
+                                    </div>
+                                )}
+
+                                {imageUrl && (
+                                    <>
+                                        <img src={imageUrl} alt={`Generated ad in ${style.name} style`} className="w-full h-full object-cover" />
+                                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                            <p className="text-white font-bold text-lg">Preview</p>
+                                        </div>
+                                    </>
+                                )}
+                                
+                                {!imageUrl && !isGenerating && (
+                                    <div className="absolute inset-0 bg-slate-900/50 flex flex-col items-center justify-center text-center p-3 sm:p-4 text-slate-300">
+                                        <div className="absolute inset-0 overflow-hidden rounded-lg">
+                                            <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-900" />
+                                            <div className="absolute inset-0 opacity-70 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.4),_transparent_60%)]" />
+                                            <div className="absolute inset-0 opacity-50 bg-[radial-gradient(circle_at_bottom,_rgba(14,165,233,0.25),_transparent_65%)]" />
+
+                                            <div className="relative z-10 flex h-full flex-col justify-between p-4 sm:p-5 text-left">
+                                                <div className="flex items-start gap-3">
+                                                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 ring-1 ring-white/10 shadow-lg shadow-indigo-500/10">
+                                                        <IconComponent className="h-6 w-6 text-indigo-300" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[0.65rem] uppercase tracking-[0.35em] text-indigo-200/80">Ad Style</p>
+                                                        <h3 className="mt-1 text-base sm:text-lg font-semibold leading-tight text-white">{style.name}</h3>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <p className="text-[0.65rem] uppercase tracking-[0.35em] text-indigo-200/80">Ad Style</p>
-                                                    <h3 className="mt-1 text-base sm:text-lg font-semibold leading-tight text-white">{style.name}</h3>
+
+                                                {/* Simplified description - just show truncated version */}
+                                                <div className="mt-4 flex-1 overflow-hidden">
+                                                    <p className="text-xs leading-relaxed text-slate-300 line-clamp-2">
+                                                        {style.description}
+                                                    </p>
+                                                    <p className="mt-1 text-[0.65rem] text-indigo-300 font-medium">
+                                                        Hover for full description
+                                                    </p>
                                                 </div>
-                                            </div>
 
-                                            <div className="mt-4 flex-1 overflow-hidden">
-                                                <p className="h-full text-sm leading-relaxed text-slate-200 sm:text-[0.95rem] [mask-image:linear-gradient(to_bottom,rgba(0,0,0,1),rgba(0,0,0,0.75)_70%,rgba(0,0,0,0)_100%)]">
-                                                    {style.description}
-                                                </p>
-                                            </div>
-
-                                            <div className="mt-5 flex items-center justify-between text-[0.65rem] font-semibold uppercase tracking-[0.45em] text-slate-300">
-                                                <span>{isActionable ? 'Ready to Generate' : 'Unavailable'}</span>
-                                                {isActionable && (
-                                                    <span className="flex items-center gap-2 text-indigo-300">
-                                                        <span className="inline-flex h-2 w-2 animate-pulse rounded-full bg-indigo-300" />
-                                                        Preview
-                                                    </span>
-                                                )}
+                                                <div className="mt-5 flex items-center justify-between text-[0.65rem] font-semibold uppercase tracking-[0.45em] text-slate-300">
+                                                    <span>{isActionable ? 'Ready' : 'Unavailable'}</span>
+                                                    {isActionable && (
+                                                        <span className="flex items-center gap-2 text-indigo-300">
+                                                            <span className="inline-flex h-2 w-2 animate-pulse rounded-full bg-indigo-300" />
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            )}
+                                )}
+                            </div>
                         </div>
                     );
                 })}

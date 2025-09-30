@@ -1,478 +1,366 @@
-
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import ImageUploader from './components/ImageUploader';
 import GeneratedAd from './components/GeneratedAd';
-import { generateEbayAdImage, generateProductInfoFromImage, generateAdStyleSuggestions } from './services/geminiService';
 import AdPreviewModal from './components/AdPreviewModal';
 import HistoryPanel from './components/HistoryPanel';
 import { useLocalStorage } from './hooks/useLocalStorage';
-import JSZip from 'jszip';
+import { 
+    generateProductInfoFromImage, 
+    generateEbayAdImage,
+    generateAdStyleSuggestions,
+} from './services/geminiService';
 
-// --- Type Definitions ---
-interface AdData {
-    styleName: string;
-    imageUrl: string;
-}
-export interface HistoryItem {
-    id: number;
-    productName: string;
-    productDescription: string;
-    productImage: {
-        base64: string;
-        type: string;
-        name: string;
-    };
-    ads: AdData[];
-    createdAt: string;
-}
+// --- TYPE DEFINITIONS ---
 
-// FIX: Define a type for style objects to include the optional `isSuggested`
-// property. This resolves a TypeScript error when adding suggested styles or styles
-// from history, ensuring type consistency for all style objects.
-interface StyleData {
+interface Style {
     name: string;
     description: string;
     prompt: string;
     isSuggested?: boolean;
 }
 
-// --- Icon Components ---
-const MagicWandIcon: React.FC<{ className?: string }> = ({ className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9.53 16.122a3 3 0 00-5.78 1.128 2.25 2.25 0 01-2.4 2.245 4.5 4.5 0 008.4-2.245c0-.399-.078-.78-.22-1.128zm0 0a15.998 15.998 0 003.388-1.62m-5.043-.025a15.998 15.998 0 011.622-3.385m5.043.025a15.998 15.998 0 001.622-3.385m3.388 1.62a15.998 15.998 0 00-1.622-3.385m-5.043-.025a15.998 15.998 0 01-3.388-1.621m-5.043.025a15.998 15.998 0 01-1.622-3.385m3.388 1.621a15.998 15.998 0 01-1.622-3.385" />
-    </svg>
-);
-const DownloadIcon: React.FC<{ className?: string }> = ({ className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-    </svg>
-);
-const HistoryIcon: React.FC<{ className?: string }> = ({ className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-);
-const SaveIcon: React.FC<{ className?: string }> = ({ className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3H5.25A2.25 2.25 0 003 5.25v13.5" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M15 3h4.5v4.5" />
-    </svg>
-);
+export interface HistoryItem {
+    id: number;
+    createdAt: number;
+    productName: string;
+    productDescription: string;
+    productImage: {
+        base64: string;
+        type: string;
+    };
+    ads: { name: string; url: string }[];
+    styles: Style[];
+}
 
+// --- CONSTANTS ---
 
-const INITIAL_STYLES: StyleData[] = [
-    { name: "Modern & Spec Driven", description: "Sleek, clean & spec-focused.", prompt: "Modern & Spec Driven: A sleek, contemporary aesthetic featuring clean lines, ample white space, and a minimalist design. This style focuses heavily on technical specifications and product features, presenting them in a clear, organized manner akin to a high-end spec sheet. The color palette is sophisticated and neutral, often using monochrome with a single accent color to draw attention to key details." },
-    { name: "Bold & Dynamic", description: "Vibrant, energetic & action-oriented.", prompt: "Bold & Dynamic: An energetic and eye-catching style designed to create excitement. It uses vibrant, contrasting color schemes, dynamic angles, and geometric shapes to guide the viewer's attention. Typography is strong, impactful, and often used creatively to highlight the product's most exciting features and create a sense of action." },
-    { name: "Elegant & Professional", description: "Sophisticated, refined & premium.", prompt: "Elegant & Professional: A sophisticated blend of modern aesthetics and engaging elements. Uses a refined color palette with eye catching accesnts and a balanced layout to build trust and convey premium quality." },
-    { name: "Lifestyle & Aspirational", description: "Relatable, aspirational & in-context.", prompt: "Lifestyle & Aspirational: Showcases the product in a realistic, relatable usage scenario. Focuses on the experience and emotion of using the product. Uses warm, natural lighting and authentic-looking environments to create a connection with the buyer's aspirations." },
-    { name: "Tech-Forward & Futuristic", description: "Dark, neon & high-tech.", prompt: "Tech-Forward & Futuristic: Employs a dark-mode aesthetic with neon accents, glowing lines, and abstract, tech-inspired backgrounds. Typography is sharp and digital. This style is perfect for cutting-edge gadgets and conveys innovation and high performance." },
-    { name: "Playful & Colorful", description: "Bright, fun & engaging.", prompt: "Playful & Colorful: Uses a bright, cheerful color palette, fun illustrations, and quirky typography. This style is informal and friendly, designed to be memorable and engaging. It's ideal for products aimed at a younger audience or items with a creative, fun purpose." },
-    { name: "Vintage & Nostalgic", description: "Nostalgic, timeless & retro.", prompt: "Vintage & Nostalgic: Evokes a sense of nostalgia with sepia tones, classic serif fonts, and distressed textures. The layout should feel like a page from an old magazine or a classic poster. Use imagery and design elements that hearken back to the 1950s-1970s to create a warm, timeless feel." },
-    { name: "Minimalist Line Art", description: "Simple, elegant & artistic.", prompt: "Minimalist Line Art: Uses clean, simple, continuous line drawings to illustrate the product and its features. The color palette is extremely limited, often just black and white or a single accent color. Typography is san-serif and understated. The focus is on elegance and communicating ideas with minimal visual clutter." },
-    { name: "Retro Futurism", description: "80s sci-fi, chrome & neon.", prompt: "Retro Futurism: Combines vintage aesthetics with futuristic technology concepts. Think chrome textures, neon glows, and geometric shapes reminiscent of 80s sci-fi. The color palette is often dark with vibrant, contrasting highlights. Typography is bold and has a digital, space-age feel. It's optimistic and imaginative." }
+const DEFAULT_STYLES: Style[] = [
+    { name: "Modern & Spec Driven", description: "A sleek, contemporary aesthetic featuring clean lines, ample white space, and a minimalist design.", prompt: "Modern & Spec Driven: A sleek, contemporary aesthetic featuring clean lines, ample white space, and a minimalist design. Use a professional, sans-serif font. The color palette should be muted, with a single accent color. Clearly list the top 3-4 specifications with icons. The overall mood is high-tech and premium." },
+    { name: "Bold & Dynamic", description: "An energetic and eye-catching design with strong typography, vibrant colors, and dynamic angles.", prompt: "Bold & Dynamic: An energetic and eye-catching design. Use strong, bold typography, vibrant, saturated colors, and dynamic angles or compositions. The background should be abstract or graphic. The goal is to grab attention immediately. The mood is exciting and powerful." },
+    { name: "Elegant & Professional", description: "A sophisticated and luxurious style using serif fonts, a refined color palette, and a balanced, classic layout.", prompt: "Elegant & Professional: A sophisticated and luxurious style. Use classic serif fonts, a refined color palette (e.g., deep blues, gold, charcoal), and a balanced, symmetrical layout. The mood is trustworthy, premium, and high-end." },
+    { name: "Lifestyle & Aspirational", description: "Showcases the product in a real-world, aspirational context, focusing on the user experience and benefits.", prompt: "Lifestyle & Aspirational: Showcases the product in a real-world, aspirational context. The product should be integrated into a scene that evokes a desirable feeling or outcome. Use warm, natural lighting and focus on the user's experience. The mood is relatable and inspiring." },
+    { name: "Tech-Forward & Futuristic", description: "A cutting-edge design with neon accents, dark backgrounds, and digital or circuit-like motifs.", prompt: "Tech-Forward & Futuristic: A cutting-edge design. Use dark backgrounds, neon accents (blues, purples, pinks), and digital or circuit-like graphical elements. Typography should be modern and geometric. The mood is innovative, advanced, and exciting." },
+    { name: "Playful & Colorful", description: "A fun and friendly design using bright colors, rounded shapes, and whimsical illustrations or icons.", prompt: "Playful & Colorful: A fun and friendly design. Use a bright, diverse color palette, rounded shapes, and whimsical, illustrated icons or elements. Typography should be approachable and perhaps slightly quirky. The mood is cheerful, accessible, and energetic." },
+    { name: "Vintage & Nostalgic", description: "A retro-inspired look using textures, muted color palettes, and typography reminiscent of a specific past era.", prompt: "Vintage & Nostalgic: A retro-inspired look. Use textures (like paper or grain), muted color palettes (e.g., sepia, faded tones), and typography reminiscent of a specific past era (e.g., '70s script, '50s sans-serif). The mood is authentic, charming, and nostalgic." },
+    { name: "Minimalist Line Art", description: "A clean and artistic style using simple line drawings and a monochrome color scheme to highlight the product.", prompt: "Minimalist Line Art: A clean, artistic, and modern style. Use simple, single-weight line drawings of the product and related icons. The color scheme should be strictly monochrome or have a single, subtle accent color. The mood is sophisticated, clean, and elegant." },
+    { name: "Retro Futurism", description: "A creative blend of vintage aesthetics with futuristic concepts, often featuring chrome, curves, and a sense of optimism.", prompt: "Retro Futurism: A creative blend of vintage aesthetics (like '50s or '60s design) with futuristic concepts. Think chrome, smooth curves, and atomic-age motifs. The color palette is often optimistic, with teals, oranges, and creams. The mood is imaginative, stylish, and cool." },
 ];
 
+// --- HELPER FUNCTIONS ---
 
-const toBase64 = (file: File): Promise<string> => {
+const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
         reader.onload = () => {
-            const result = reader.result as string;
-            // Remove the data URL prefix e.g. "data:image/png;base64,"
-            const base64 = result.split(',')[1];
-            resolve(base64);
+            const result = (reader.result as string).split(',')[1];
+            resolve(result);
         };
-        reader.onerror = (error) => reject(error);
+        reader.onerror = error => reject(error);
     });
 };
 
-const base64ToFile = (base64: string, filename: string, mimeType: string): File => {
-    const byteCharacters = atob(base64);
-    const byteNumbers = new Array(byteCharacters.length);
-    for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
-    }
-    const byteArray = new Uint8Array(byteNumbers);
-    const blob = new Blob([byteArray], { type: mimeType });
-    return new File([blob], filename, { type: mimeType });
-};
+// --- MAIN APP COMPONENT ---
 
-
-const App: React.FC = () => {
-    const [productName, setProductName] = useState<string>('');
-    const [productDescription, setProductDescription] = useState<string>('');
+function App() {
+    // State
     const [productImageFile, setProductImageFile] = useState<File | null>(null);
-    const [imagePreview, setImagePreview] = useState<string | null>(null);
-    const [generatedAds, setGeneratedAds] = useState<Map<string, string | null>>(new Map());
-    const [isAnalyzingImage, setIsAnalyzingImage] = useState<boolean>(false);
-    const [isAnyGenerationActive, setIsAnyGenerationActive] = useState<boolean>(false);
-    const [isZipping, setIsZipping] = useState<boolean>(false);
-    const [error, setError] = useState<string | null>(null);
-    const [selectedAd, setSelectedAd] = useState<{ url: string; name: string } | null>(null);
-    const [styles, setStyles] = useState(INITIAL_STYLES);
-    const [isSuggestingStyles, setIsSuggestingStyles] = useState<boolean>(false);
-    const [history, setHistory] = useLocalStorage<HistoryItem[]>('ad-generator-history', []);
-    const [isHistoryPanelOpen, setIsHistoryPanelOpen] = useState(false);
-
-    const handleImageChange = (file: File | null) => {
-        if (file) {
-            setProductImageFile(file);
-            const previewUrl = URL.createObjectURL(file);
-            setImagePreview(previewUrl);
-        } else {
-            setProductImageFile(null);
-            setImagePreview(null);
-        }
-        setGeneratedAds(new Map());
-        setIsAnyGenerationActive(false);
-        setStyles(INITIAL_STYLES);
-    };
+    const [productImageBase64, setProductImageBase64] = useState<string | null>(null);
+    const [productName, setProductName] = useState('');
+    const [productDescription, setProductDescription] = useState('');
     
-    const handlePreview = (url: string, name: string) => {
-        setSelectedAd({ url, name });
-    };
+    const [styles, setStyles] = useState<Style[]>(DEFAULT_STYLES);
+    const [imageUrls, setImageUrls] = useState<Map<string, string | null>>(new Map());
 
-    const handleAnalyzeImage = useCallback(async () => {
-        if (!productImageFile) {
-            setError('Please upload an image first.');
-            return;
+    const [isIdentifying, setIsIdentifying] = useState(false);
+    const [isSuggestingStyles, setIsSuggestingStyles] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const descriptionTextAreaRef = useRef<HTMLTextAreaElement>(null);
+
+    const [selectedAd, setSelectedAd] = useState<{ url: string; name: string } | null>(null);
+    
+    const [historyItems, setHistoryItems] = useLocalStorage<HistoryItem[]>('ad-gen-history', []);
+    const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+
+    // Callbacks & Handlers
+    const resetState = useCallback((clearImage: boolean = true) => {
+        if (clearImage) {
+            setProductImageFile(null);
+            setProductImageBase64(null);
         }
-        setError(null);
         setProductName('');
         setProductDescription('');
-        setIsAnalyzingImage(true);
-        setGeneratedAds(new Map());
-        setIsAnyGenerationActive(false);
-        setStyles(INITIAL_STYLES);
-
-        try {
-            const imageBase64 = await toBase64(productImageFile);
-            const { productName, productDescription } = await generateProductInfoFromImage(imageBase64, productImageFile.type);
-            setProductName(productName);
-            setProductDescription(productDescription);
-        } catch (e) {
-            console.error(e);
-            setError(e instanceof Error ? e.message : 'An unknown error occurred during image analysis.');
-        } finally {
-            setIsAnalyzingImage(false);
-        }
-    }, [productImageFile]);
-    
-    const handleGenerateStyle = useCallback(async (styleName: string) => {
-        if (generatedAds.has(styleName)) {
-            // Already generated or generating, do nothing
-            return;
-        }
-        if (!productDescription || !productImageFile) {
-            setError('Please provide a description and image before generating styles.');
-            return;
-        }
-
+        setImageUrls(new Map());
         setError(null);
-        if (!isAnyGenerationActive) {
-          setIsAnyGenerationActive(true);
-        }
+        setStyles(DEFAULT_STYLES);
+        setIsIdentifying(false);
+        setIsSuggestingStyles(false);
+    }, []);
 
-        setGeneratedAds(prevAds => new Map(prevAds).set(styleName, null));
+    const handleImageChange = useCallback(async (file: File | null) => {
+        if (!file) {
+            resetState();
+            return;
+        }
+        
+        resetState();
+        setProductImageFile(file);
+        setError(null);
+        setIsIdentifying(true);
 
         try {
-            const imageBase64 = await toBase64(productImageFile);
-            const mimeType = productImageFile.type;
-            const style = styles.find(s => s.name === styleName);
-            if (!style) throw new Error("Style not found");
+            const base64 = await fileToBase64(file);
+            setProductImageBase64(base64);
 
-            const adImage = await generateEbayAdImage(productDescription, imageBase64, mimeType, style.prompt);
-            const imageUrl = `data:image/png;base64,${adImage}`;
-            setGeneratedAds(prevAds => new Map(prevAds).set(styleName, imageUrl));
-        } catch (e) {
-            console.error(`Failed to generate ad for style: ${styleName}`, e);
-            setError(`Failed to generate ad for ${styleName}. Please try again.`);
-            // Allow retry by removing from map
-            setGeneratedAds(prevAds => {
-                const newAds = new Map(prevAds);
-                newAds.delete(styleName);
-                return newAds;
+            const info = await generateProductInfoFromImage(base64, file.type);
+            setProductName(info.productName);
+            setProductDescription(info.productDescription);
+        } catch (e: any) {
+            console.error(e);
+            setError(e.message || 'Failed to get product information from image. Please try another image.');
+        } finally {
+            setIsIdentifying(false);
+        }
+    }, [resetState]);
+
+    const handleGenerateStyle = useCallback(async (styleName: string) => {
+        if (!productImageBase64 || !productImageFile || !productDescription) return;
+
+        const currentStyle = styles.find(s => s.name === styleName);
+        if (!currentStyle) return;
+
+        setImageUrls(prev => new Map(prev).set(styleName, null));
+        setError(null);
+
+        try {
+            const generatedImageBase64 = await generateEbayAdImage(
+                productDescription,
+                productImageBase64,
+                productImageFile.type,
+                currentStyle.prompt,
+            );
+            const imageUrl = `data:image/png;base64,${generatedImageBase64}`;
+            setImageUrls(prev => new Map(prev).set(styleName, imageUrl));
+        } catch(e: any) {
+            console.error(e);
+            setError(e.message || `Failed to generate ad for style: ${styleName}`);
+            // Remove the loading state on error
+            setImageUrls(prev => {
+                const newMap = new Map(prev);
+                newMap.delete(styleName);
+                return newMap;
             });
         }
-    }, [productDescription, productImageFile, generatedAds, isAnyGenerationActive, styles]);
+    }, [productImageBase64, productImageFile, productDescription, styles]);
 
     const handleSuggestStyles = useCallback(async () => {
-        if (!productDescription || !productImageFile) {
-            setError('Please provide a description and image first.');
-            return;
-        }
-        setError(null);
-        setIsSuggestingStyles(true);
-        try {
-            const imageBase64 = await toBase64(productImageFile);
-            const mimeType = productImageFile.type;
-            const suggestions = await generateAdStyleSuggestions(productDescription, imageBase64, mimeType);
-            
-            const existingStyleNames = new Set(styles.map(s => s.name));
-            const newUniqueSuggestions = suggestions
-                .filter(s => !existingStyleNames.has(s.name))
-                .map(s => ({ ...s, isSuggested: true }));
-            
-            setStyles(prevStyles => [...prevStyles, ...newUniqueSuggestions]);
+        if (!productImageBase64 || !productImageFile || !productDescription) return;
 
-        } catch (e) {
-            console.error("Failed to suggest styles", e);
-            setError(e instanceof Error ? e.message : 'An unknown error occurred while suggesting styles.');
+        setIsSuggestingStyles(true);
+        setError(null);
+
+        try {
+            const suggestions = await generateAdStyleSuggestions(
+                productDescription,
+                productImageBase64,
+                productImageFile.type
+            );
+            const newStyles = suggestions.map(s => ({ ...s, isSuggested: true }));
+            setStyles(prev => [...prev, ...newStyles]);
+        } catch (e: any) {
+            console.error(e);
+            setError(e.message || 'Failed to suggest new styles.');
         } finally {
             setIsSuggestingStyles(false);
         }
-    }, [productDescription, productImageFile, styles]);
-
-
-    const handleDownloadAll = useCallback(async () => {
-        if (!productDescription || generatedAds.size === 0) return;
-        
-        const generatedCount = Array.from(generatedAds.values()).filter(v => v).length;
-        if (generatedCount === 0) return;
-
-        setIsZipping(true);
-        setError(null);
-        
-        try {
-            const zip = new JSZip();
-
-            zip.file('product-description.txt', productDescription);
-
-            generatedAds.forEach((url, styleName) => {
-                if (url) {
-                    const styleIndex = styles.findIndex(s => s.name === styleName);
-                    const base64Data = url.split(',')[1];
-                    const safeStyleName = styleName.replace(/[^a-zA-Z0-9]/g, '-');
-                    zip.file(`ebay-ad-style-${styleIndex + 1}-${safeStyleName}.png`, base64Data, { base64: true });
-                }
-            });
-
-            const zipBlob = await zip.generateAsync({ type: 'blob' });
-            const zipUrl = URL.createObjectURL(zipBlob);
-            const link = document.createElement('a');
-            link.href = zipUrl;
-            link.download = 'ebay-ad-assets.zip';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(zipUrl);
-
-        } catch (e) {
-            console.error("Error creating zip file", e);
-            setError("Sorry, there was an error creating the zip file. Please try downloading images individually.");
-        } finally {
-            setIsZipping(false);
-        }
-    }, [productDescription, generatedAds, styles]);
+    }, [productDescription, productImageBase64, productImageFile]);
     
-    // --- History Functions ---
-    const handleSaveToHistory = useCallback(async () => {
-        if (!productImageFile || successfullyGeneratedCount === 0) return;
+    const handleSaveToHistory = useCallback(() => {
+        if (!productImageFile || !productImageBase64 || !productName) {
+            alert("Cannot save an empty session.");
+            return;
+        }
 
-        const imageBase64 = await toBase64(productImageFile);
-        
+        const generatedAds = Array.from(imageUrls.entries())
+            .filter(([, url]) => url !== null)
+            .map(([name, url]) => ({ name, url: url! }));
+
         const newHistoryItem: HistoryItem = {
             id: Date.now(),
+            createdAt: Date.now(),
             productName,
             productDescription,
             productImage: {
-                base64: imageBase64,
+                base64: productImageBase64,
                 type: productImageFile.type,
-                name: productImageFile.name,
             },
-            ads: Array.from(generatedAds.entries())
-                .filter(([, url]) => url !== null)
-                .map(([styleName, imageUrl]) => ({ styleName, imageUrl: imageUrl! })),
-            createdAt: new Date().toISOString(),
+            ads: generatedAds,
+            styles: styles,
         };
 
-        setHistory(prevHistory => [newHistoryItem, ...prevHistory]);
-        setIsHistoryPanelOpen(true);
-    }, [productImageFile, productName, productDescription, generatedAds, setHistory]);
+        setHistoryItems(prev => [newHistoryItem, ...prev]);
+        setIsHistoryOpen(true);
+    }, [productImageFile, productImageBase64, productName, productDescription, imageUrls, styles, setHistoryItems]);
 
-    const handleLoadHistoryItem = useCallback((itemId: number) => {
-        const itemToLoad = history.find(item => item.id === itemId);
+    const handleLoadItem = useCallback((id: number) => {
+        const itemToLoad = historyItems.find(item => item.id === id);
         if (!itemToLoad) return;
 
-        // Restore state from history item
+        // Create a File object approximation for the uploader preview
+        const mimeType = itemToLoad.productImage.type;
+        const byteCharacters = atob(itemToLoad.productImage.base64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: mimeType });
+        const file = new File([blob], "loaded-image.jpg", { type: mimeType });
+        
+        setProductImageFile(file);
+        setProductImageBase64(itemToLoad.productImage.base64);
         setProductName(itemToLoad.productName);
         setProductDescription(itemToLoad.productDescription);
-
-        const imageFile = base64ToFile(itemToLoad.productImage.base64, itemToLoad.productImage.name, itemToLoad.productImage.type);
-        setProductImageFile(imageFile);
-        setImagePreview(URL.createObjectURL(imageFile));
-
-        const adsMap = new Map<string, string | null>();
-        itemToLoad.ads.forEach(ad => {
-            adsMap.set(ad.styleName, ad.imageUrl);
-        });
-        setGeneratedAds(adsMap);
-        
-        // Reset styles to default and add any suggested ones from the session
-        const loadedStyleNames = new Set(itemToLoad.ads.map(ad => ad.styleName));
-        const initialStyleNames = new Set(INITIAL_STYLES.map(s => s.name));
-        const allStyles = [...INITIAL_STYLES];
-        itemToLoad.ads.forEach(ad => {
-            if (!initialStyleNames.has(ad.styleName)) {
-                // This was likely a suggested style, but we don't have its prompt.
-                // We'll create a placeholder. A more robust solution might save prompts too.
-                allStyles.push({ 
-                    name: ad.styleName,
-                    description: "Custom style from history.",
-                    prompt: `A custom ad style named ${ad.styleName}.`, // Placeholder prompt
-                    isSuggested: true 
-                });
-            }
-        });
-        setStyles(allStyles);
-        
-        setIsHistoryPanelOpen(false);
+        setStyles(itemToLoad.styles);
+        setImageUrls(new Map(itemToLoad.ads.map(ad => [ad.name, ad.url])));
         setError(null);
-    }, [history]);
+        setIsHistoryOpen(false);
+    }, [historyItems]);
 
     const handleClearHistory = useCallback(() => {
-        setHistory([]);
-    }, [setHistory]);
+        if (window.confirm("Are you sure you want to clear all saved sessions? This cannot be undone.")) {
+            setHistoryItems([]);
+        }
+    }, [setHistoryItems]);
 
-    useEffect(() => {
-        const activeGenerations = Array.from(generatedAds.values()).some(v => v === null);
-        const allGenerated = Array.from(generatedAds.keys()).length > 0 && !activeGenerations;
-        
-        setIsAnyGenerationActive(activeGenerations);
+    // Auto-resize textarea
+    React.useEffect(() => {
+        const textarea = descriptionTextAreaRef.current;
+        if (textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = `${textarea.scrollHeight}px`;
+        }
+    }, [productDescription]);
 
-    }, [generatedAds]);
+    const isActionable = !!productImageBase64 && !!productDescription && !isIdentifying;
+    const generatedCount = Array.from(imageUrls.values()).filter(v => v !== null).length;
 
-    const successfullyGeneratedCount = Array.from(generatedAds.values()).filter(v => v).length;
-    
     return (
-        <div className="bg-slate-900 min-h-screen text-white p-4 sm:p-8">
-            <div className="max-w-7xl mx-auto">
-                <header className="flex justify-between items-center text-center mb-10">
-                    <div className="flex-1 text-center">
-                        <h1 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-purple-400 to-indigo-500 text-transparent bg-clip-text">
-                            AI eBay Ad Generator
-                        </h1>
-                        <p className="text-slate-400 mt-2 text-lg">
-                            Turn your product photo and description into professional ad styles.
-                        </p>
-                    </div>
-                     <button
-                        onClick={() => setIsHistoryPanelOpen(true)}
-                        className="p-2 rounded-full bg-slate-800/50 hover:bg-slate-700/80 transition-colors"
-                        aria-label="Open history panel"
+        <>
+            <div className="min-h-screen bg-slate-950 text-slate-100 font-sans">
+                <header className="py-4 px-6 md:px-8 border-b border-slate-800 flex justify-between items-center">
+                    <h1 className="text-xl font-bold text-white tracking-wide">
+                        eBay Ad <span className="text-indigo-400">Generator</span>
+                    </h1>
+                    <button 
+                        onClick={() => setIsHistoryOpen(true)}
+                        className="flex items-center gap-2 text-sm font-semibold text-slate-300 hover:text-white transition-colors"
                     >
-                        <HistoryIcon className="w-6 h-6 text-slate-300" />
+                         History ({historyItems.length})
                     </button>
                 </header>
 
-                <main className="grid grid-cols-1 md:grid-cols-5 gap-8 lg:gap-12">
-                    {/* Input Section */}
-                    <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700 flex flex-col gap-6 md:col-span-2">
-                        <div>
-                            <label className="block text-md font-medium text-slate-200 mb-3">
-                                1. Product Image
-                            </label>
-                            <ImageUploader onImageChange={handleImageChange} imagePreviewUrl={imagePreview} disabled={isAnyGenerationActive}/>
-                        </div>
-                        
-                        {imagePreview && (
-                             <div>
-                                <button
-                                   onClick={handleAnalyzeImage}
-                                   disabled={isAnalyzingImage || isAnyGenerationActive}
-                                   className="w-full flex items-center justify-center gap-2 bg-sky-600 hover:bg-sky-500 disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-lg transition-all duration-300 ease-in-out transform hover:-translate-y-px"
-                               >
-                                   <MagicWandIcon className="w-5 h-5" />
-                                   {isAnalyzingImage ? 'Analyzing Image...' : 'Analyze Image with AI'}
-                               </button>
-                           </div>
-                        )}
-                        
-                         <div>
-                            <label htmlFor="productName" className="block text-md font-medium text-slate-200 mb-3">
-                                2. Product Name or Model <span className="text-slate-400 text-sm">(Optional)</span>
-                            </label>
-                            <input
-                                id="productName"
-                                type="text"
-                                value={productName}
-                                onChange={(e) => setProductName(e.target.value)}
-                                placeholder="e.g., Sony WH-1000XM5 Wireless Headphones"
-                                className="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-300 ease-in-out placeholder-slate-500"
-                                disabled={isAnalyzingImage || isAnyGenerationActive}
-                            />
-                        </div>
+                <main className="p-4 md:p-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-7xl mx-auto">
+                        {/* Left Column: Input */}
+                        <div className="flex flex-col gap-6">
+                            <div>
+                                <h2 className="text-lg font-semibold text-slate-300 mb-2">1. Upload Product Image</h2>
+                                <ImageUploader
+                                    onImageChange={handleImageChange}
+                                    imagePreviewUrl={productImageFile ? URL.createObjectURL(productImageFile) : null}
+                                    disabled={isIdentifying}
+                                />
+                            </div>
 
-                        <div>
-                            <label htmlFor="description" className="block text-md font-medium text-slate-200 mb-3">
-                                3. Product Description
-                            </label>
-                            <textarea
-                                id="description"
-                                rows={8}
-                                value={productDescription}
-                                onChange={(e) => setProductDescription(e.target.value)}
-                                placeholder="Upload an image and click 'Analyze Image with AI' above to create a description, or write your own."
-                                className="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-300 ease-in-out placeholder-slate-500"
-                                disabled={isAnalyzingImage || isAnyGenerationActive}
-                            />
-                        </div>
-                        
-                        <div className="mt-auto pt-6 space-y-4">
-                             {error && <p className="text-red-400 text-sm text-center">{error}</p>}
-                            
-                             {successfullyGeneratedCount > 0 && (
-                                <button
-                                    onClick={handleSaveToHistory}
-                                    className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-indigo-500/50"
-                                >
-                                    <SaveIcon className="w-5 h-5" />
-                                    Save to History
-                                </button>
+                            {isIdentifying && (
+                                <div className="text-center p-4 bg-slate-900 rounded-lg">
+                                    <p className="text-indigo-300 animate-pulse">AI is identifying your product...</p>
+                                </div>
                             )}
+
+                            {error && (
+                                <div className="p-4 bg-red-900/50 border border-red-700 text-red-300 rounded-lg">
+                                    <p className="font-bold">An Error Occurred</p>
+                                    <p className="text-sm">{error}</p>
+                                </div>
+                            )}
+
+                            <div className={`transition-opacity duration-500 ${isActionable ? 'opacity-100' : 'opacity-50 pointer-events-none'}`}>
+                                <h2 className="text-lg font-semibold text-slate-300 mb-2">2. Review Product Info</h2>
+                                <div className="flex flex-col gap-4">
+                                    <input
+                                        type="text"
+                                        value={productName}
+                                        onChange={(e) => setProductName(e.target.value)}
+                                        placeholder="Product Name"
+                                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition"
+                                        disabled={!isActionable}
+                                    />
+                                    <textarea
+                                        ref={descriptionTextAreaRef}
+                                        value={productDescription}
+                                        onChange={(e) => setProductDescription(e.target.value)}
+                                        placeholder="Product Description"
+                                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition resize-none overflow-hidden"
+                                        rows={8}
+                                        disabled={!isActionable}
+                                    />
+                                </div>
+                            </div>
                             
-                            {successfullyGeneratedCount > 0 && (
-                                <button
-                                    onClick={handleDownloadAll}
-                                    disabled={isZipping}
-                                    className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-lg transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-emerald-500/50 disabled:transform-none"
-                                >
-                                    <DownloadIcon className="w-5 h-5" />
-                                    {isZipping ? 'Zipping Assets...' : `Download ${successfullyGeneratedCount} Ad${successfullyGeneratedCount > 1 ? 's' : ''} as .zip`}
-                                </button>
+                            {isActionable && (
+                                <div className="flex flex-col sm:flex-row gap-4 mt-2">
+                                    <button 
+                                        onClick={handleSaveToHistory}
+                                        disabled={!generatedCount}
+                                        className="flex-1 w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors disabled:bg-indigo-600/50 disabled:cursor-not-allowed"
+                                        title={!generatedCount ? "Generate at least one ad to save." : "Save session"}
+                                    >
+                                        Save to History
+                                    </button>
+                                    <button 
+                                        onClick={() => resetState(true)}
+                                        className="flex-1 w-full flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold py-2.5 px-4 rounded-lg transition-colors"
+                                    >
+                                        Start Over
+                                    </button>
+                                </div>
                             )}
                         </div>
-                    </div>
 
-                    {/* Output Section */}
-                    <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800 md:col-span-3">
-                        <GeneratedAd 
-                            styles={styles}
-                            onGenerateStyle={handleGenerateStyle}
-                            imageUrls={generatedAds} 
-                            onPreview={handlePreview} 
-                            isActionable={!!productDescription && !!productImageFile}
-                            onSuggestStyles={handleSuggestStyles}
-                            isSuggestingStyles={isSuggestingStyles}
-                        />
+                        {/* Right Column: Generated Ads */}
+                        <div className="flex flex-col gap-6">
+                            <div>
+                                <h2 className="text-lg font-semibold text-slate-300 mb-2">3. Generate Ad Style</h2>
+                                <GeneratedAd
+                                    styles={styles}
+                                    onGenerateStyle={handleGenerateStyle}
+                                    imageUrls={imageUrls}
+                                    onPreview={(url, name) => setSelectedAd({ url, name })}
+                                    isActionable={isActionable}
+                                    onSuggestStyles={handleSuggestStyles}
+                                    isSuggestingStyles={isSuggestingStyles}
+                                />
+                            </div>
+                        </div>
                     </div>
                 </main>
-
-                <footer className="text-center mt-12 text-slate-500 text-sm">
-                    <p>Powered by Google Gemini. For demonstration purposes only.</p>
-                </footer>
             </div>
-            <AdPreviewModal selectedAd={selectedAd} onClose={() => setSelectedAd(null)} />
-            <HistoryPanel 
-                isOpen={isHistoryPanelOpen}
-                onClose={() => setIsHistoryPanelOpen(false)}
-                historyItems={history}
-                onLoadItem={handleLoadHistoryItem}
+
+            <AdPreviewModal 
+                selectedAd={selectedAd}
+                onClose={() => setSelectedAd(null)}
+            />
+            <HistoryPanel
+                isOpen={isHistoryOpen}
+                onClose={() => setIsHistoryOpen(false)}
+                historyItems={historyItems}
+                onLoadItem={handleLoadItem}
                 onClearHistory={handleClearHistory}
             />
-        </div>
+        </>
     );
-};
+}
 
 export default App;
