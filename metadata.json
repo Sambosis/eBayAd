@@ -1,7 +1,4 @@
 {
   "name": "AdSpark AI",
-  "description": "Just upload the picture of the product you want to sell and we'll ID it, create a product description and then suggest some AI generated Ad Images for you to use in your selling campain.",
-  "requestFramePermissions": [
-    "camera"
-  ]
+  "description": "Just upload the picture of the product you want to sell and we'll ID it, create a product description and then suggest some AI generated Ad Images for you to use in your selling campain."
 }
