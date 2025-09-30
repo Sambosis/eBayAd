@@ -1,3 +1,4 @@
+
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 
 interface ImageUploaderProps {
@@ -90,6 +91,8 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageChange, imagePrevi
         if (disabled) return;
         const file = event.target.files?.[0] || null;
         onImageChange(file);
+        // Close the modal once a file is selected
+        setIsChoiceModalOpen(false);
     };
     
     const handleUploaderClick = () => {
@@ -109,7 +112,6 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageChange, imagePrevi
     }
 
     const handleChooseFile = () => {
-        setIsChoiceModalOpen(false);
         fileInputRef.current?.click();
     };
 
