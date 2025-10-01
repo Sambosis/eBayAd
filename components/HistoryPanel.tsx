@@ -66,10 +66,10 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({ isOpen, onClose, historyIte
                                         <p className="font-semibold text-white truncate" title={item.productName}>
                                             {item.productName || 'Untitled Product'}
                                         </p>
-                                        <p className="text-xs text-slate-300">
+                                        <p className="text-xs text-slate-400">
                                             {new Date(item.createdAt).toLocaleString()}
                                         </p>
-                                        <p className="text-xs text-slate-300 mt-1">
+                                        <p className="text-xs text-slate-400 mt-1">
                                             {item.ads.length} ad{item.ads.length !== 1 ? 's' : ''} generated
                                         </p>
                                         <button

@@ -132,6 +132,7 @@ function App() {
             return;
         }
 
+
         resetState();
         setProductImageFile(file);
         setError(null);
@@ -151,6 +152,24 @@ function App() {
             setIsIdentifying(false);
         }
     }, [resetState]);
+
+    const handleRegenerateDescription = useCallback(async () => {
+        if (!productImageBase64 || !productImageFile) return;
+
+        setIsIdentifying(true);
+        setError(null);
+
+        try {
+            const info = await generateProductInfoFromImage(productImageBase64, productImageFile.type);
+            setProductName(info.productName);
+            setProductDescription(info.productDescription);
+        } catch (e: any) {
+            console.error(e);
+            setError(e.message || 'Failed to regenerate product description. Please try again.');
+        } finally {
+            setIsIdentifying(false);
+        }
+    }, [productImageBase64, productImageFile]);
 
     const handleRegenerateDescription = useCallback(async () => {
         if (!productImageBase64 || !productImageFile) return;
@@ -358,6 +377,34 @@ function App() {
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [isActionable, generatedCount, isGenerating, handleGenerateAll, handleSaveToHistory]);
+    // Keyboard shortcuts
+    React.useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Don't trigger if user is typing in an input/textarea
+            if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+                return;
+            }
+
+            // G - Generate All
+            if (e.key === 'g' || e.key === 'G') {
+                if (isActionable && !isGenerating) {
+                    e.preventDefault();
+                    handleGenerateAll();
+                }
+            }
+
+            // S - Save to History
+            if (e.key === 's' || e.key === 'S') {
+                if (generatedCount > 0) {
+                    e.preventDefault();
+                    handleSaveToHistory();
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isActionable, generatedCount, isGenerating, handleGenerateAll, handleSaveToHistory]);
 
     return (
         <>
@@ -383,6 +430,9 @@ function App() {
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-7xl mx-auto relative">
                         {/* Gradient glow effect */}
                         <div className="absolute -inset-4 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-indigo-500/10 rounded-3xl blur-3xl -z-10"></div>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-7xl mx-auto relative">
+                        {/* Gradient glow effect */}
+                        <div className="absolute -inset-4 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-indigo-500/10 rounded-3xl blur-3xl -z-10"></div>
                         {/* Left Column: Input */}
                         <div className="flex flex-col gap-6">
                             <div>
@@ -396,6 +446,7 @@ function App() {
 
                             {isIdentifying && (
                                 <div className="text-center p-4 bg-slate-900 rounded-lg">
+                                    <p className="text-white animate-pulse"><span className="text-indigo-400">AI</span> is identifying your product...</p>
                                     <p className="text-white animate-pulse"><span className="text-indigo-400">AI</span> is identifying your product...</p>
                                 </div>
                             )}
@@ -448,6 +499,22 @@ function App() {
                                             </span>
                                         </div>
                                     </div>
+                                    <div className="relative">
+                                        <textarea
+                                            ref={descriptionTextAreaRef}
+                                            value={productDescription}
+                                            onChange={(e) => setProductDescription(e.target.value)}
+                                            placeholder="Product Description"
+                                            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 pb-8 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition resize-none overflow-hidden"
+                                            rows={8}
+                                            disabled={!isActionable}
+                                        />
+                                        <div className="absolute bottom-2 right-2 flex items-center gap-2">
+                                            <span className={`text-xs ${productDescription.length > 1000 ? 'text-yellow-400' : 'text-slate-400'}`}>
+                                                {productDescription.length} characters
+                                            </span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             
@@ -483,6 +550,8 @@ function App() {
                                     isActionable={isActionable}
                                     onSuggestStyles={handleSuggestStyles}
                                     isSuggestingStyles={isSuggestingStyles}
+                                    onGenerateAll={handleGenerateAll}
+                                    onBulkDownload={handleBulkDownload}
                                     onGenerateAll={handleGenerateAll}
                                     onBulkDownload={handleBulkDownload}
                                 />

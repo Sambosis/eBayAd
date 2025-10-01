@@ -268,8 +268,8 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageChange, imagePrevi
         <>
             <div 
                 onClick={handleUploaderClick}
-                className={`relative w-full aspect-video bg-slate-900 border-2 border-dashed border-slate-700 rounded-lg flex items-center justify-center overflow-hidden transition-colors duration-300
-                    ${disabled ? 'cursor-not-allowed opacity-70' : 'cursor-pointer hover:border-indigo-400'}
+                className={`relative w-full aspect-video bg-slate-900 border-2 border-dashed border-slate-600 rounded-lg flex items-center justify-center overflow-hidden transition-colors duration-300
+                    ${disabled ? 'cursor-not-allowed opacity-70' : 'cursor-pointer hover:border-indigo-500'}
                 `}
                 role="button"
                 aria-label={imagePreviewUrl ? "Change product image" : "Upload product image"}
@@ -304,7 +304,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageChange, imagePrevi
                         {!disabled && (
                             <button
                                 onClick={handleClearImage}
-                                className="absolute top-2 right-2 p-1.5 bg-slate-900/80 rounded-full text-slate-200 hover:text-white hover:bg-slate-800 transition-all z-10"
+                                className="absolute top-2 right-2 p-1.5 bg-slate-900/60 rounded-full text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all z-10"
                                 aria-label="Remove image"
                             >
                                 <CloseIcon className="w-5 h-5" />
@@ -341,14 +341,14 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageChange, imagePrevi
                         <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <button
                                 onClick={handleChooseFile}
-                                className="flex flex-col items-center justify-center gap-3 p-6 bg-slate-700/50 hover:bg-slate-600 rounded-lg text-white transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 focus:ring-offset-slate-800"
+                                className="flex flex-col items-center justify-center gap-3 p-6 bg-slate-700/50 hover:bg-slate-700 rounded-lg text-slate-200 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-slate-800"
                             >
                                 <PhotoIcon className="w-10 h-10 text-indigo-400"/>
                                 <span className="font-semibold">From Library</span>
                             </button>
                             <button
                                 onClick={handleOpenCamera}
-                                className="flex flex-col items-center justify-center gap-3 p-6 bg-slate-700/50 hover:bg-slate-600 rounded-lg text-white transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 focus:ring-offset-slate-800"
+                                className="flex flex-col items-center justify-center gap-3 p-6 bg-slate-700/50 hover:bg-slate-700 rounded-lg text-slate-200 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-slate-800"
                             >
                                 <CameraIcon className="w-10 h-10 text-indigo-400"/>
                                 <span className="font-semibold">Use Camera</span>
@@ -364,7 +364,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageChange, imagePrevi
                     {cameraError && <p className="absolute top-4 text-red-400 bg-red-900/50 p-2 rounded">{cameraError}</p>}
                     <button
                         onClick={handleCloseCamera}
-                        className="absolute top-4 right-4 text-slate-200 hover:text-white transition-colors z-20 p-2 bg-slate-900/70 rounded-full hover:bg-slate-900"
+                        className="absolute top-4 right-4 text-slate-300 hover:text-white transition-colors z-20 p-2 bg-slate-900/50 rounded-full"
                         aria-label="Close camera"
                     >
                         <CloseIcon className="w-6 h-6" />
