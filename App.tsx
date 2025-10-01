@@ -276,18 +276,18 @@ function App() {
 
     return (
         <>
-            <div className="min-h-screen bg-slate-950 text-slate-100 font-sans">
+            <div className="min-h-screen bg-slate-950 text-white font-sans">
                 <header className="py-4 px-6 md:px-8 border-b border-slate-800 grid grid-cols-3 items-center">
                     <div className="col-start-2 flex justify-center items-center gap-3">
                         <LogoIcon className="w-7 h-7 text-indigo-400" />
-                        <h1 className="text-2xl font-bold text-white tracking-tight">
+                        <h1 className="text-4xl font-bold text-white tracking-tight">
                             AdSpark <span className="text-indigo-400">AI</span>
                         </h1>
                     </div>
                     <div className="col-start-3 justify-self-end">
-                        <button 
+                        <button
                             onClick={() => setIsHistoryOpen(true)}
-                            className="flex items-center gap-2 text-sm font-semibold text-slate-300 hover:text-white transition-colors"
+                            className="flex items-center gap-2 text-sm font-semibold text-slate-200 hover:text-white transition-colors"
                         >
                              History ({historyItems.length})
                         </button>
@@ -299,7 +299,7 @@ function App() {
                         {/* Left Column: Input */}
                         <div className="flex flex-col gap-6">
                             <div>
-                                <h2 className="text-lg font-semibold text-slate-300 mb-2">1. Upload Product Image</h2>
+                                <h2 className="text-lg font-semibold text-slate-200 mb-2">1. Upload Product Image</h2>
                                 <ImageUploader
                                     onImageChange={handleImageChange}
                                     imagePreviewUrl={productImageFile ? URL.createObjectURL(productImageFile) : null}
@@ -321,7 +321,7 @@ function App() {
                             )}
 
                             <div className={`transition-opacity duration-500 ${isActionable ? 'opacity-100' : 'opacity-50 pointer-events-none'}`}>
-                                <h2 className="text-lg font-semibold text-slate-300 mb-2">2. Review Product Info</h2>
+                                <h2 className="text-lg font-semibold text-slate-200 mb-2">2. Review Product Info</h2>
                                 <div className="flex flex-col gap-4">
                                     <input
                                         type="text"
@@ -366,7 +366,7 @@ function App() {
                         {/* Right Column: Generated Ads */}
                         <div className="flex flex-col gap-6">
                             <div>
-                                <h2 className="text-lg font-semibold text-slate-300 mb-2">3. Generate Ad Style</h2>
+                                <h2 className="text-lg font-semibold text-slate-200 mb-2">3. Generate Ad Style</h2>
                                 <GeneratedAd
                                     styles={styles}
                                     onGenerateStyle={handleGenerateStyle}
