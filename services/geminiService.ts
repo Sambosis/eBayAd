@@ -1,29 +1,73 @@
 import { GoogleGenAI, Modality, Type } from "@google/genai";
 
 const PROMPT_TEMPLATE = (description: string, style: string) => `
-You are a professional graphic designer specializing in e-commerce product advertisements.
-Your task is to create a compelling and visually appealing advertisement image for an eBay listing based on the provided product image, description, and requested style.
+You are a world-class graphic designer and visual marketing expert specializing in high-converting e-commerce product advertisements.
+Your task is to create a compelling, professional-grade advertisement image for online marketplace listings.
 
-**Style:** ${style}
+**Style Theme:** ${style}
 
-Product Description: "${description}"
+**Product Description:** "${description}"
 
-**Instructions:**
-1.  **Interpret the Style:** Strictly adhere to the requested "${style}" theme in your design.
-2.  **Analyze the Product:** Use the provided image and Product Description to understand the product's appearance. Use the description to understand its features, specs, and target audience.
-3.  **Professional Layout:** Create a layout that reflects the "${style}" theme. Use a balanced composition with a sophisticated color palette that complements the product and the style.
-4.  **Highlight Key Information:** Extract the most important features, use cases, and specifications from the description. Present this information clearly using short text snippets and typography that match the "${style}" theme.
-5.  **Incorporate Visuals & Icons:** Use relevant, beautifully designed, colored icons and visual elements that fit the "${style}" theme.
-6.  **Product Image:** Isolate the main product from the provided image, removing its original background completely. Place the isolated product prominently in your new design, perhaps with a subtle drop shadow to make it stand out.
-7.  **CRITICAL RULE:** Do NOT show any retail packaging, boxes, or original branding from a box. The focus must be solely on the product itself and its features.
-8.  **Final Output:** The final image should be a single, cohesive advertisement graphic ready for an eBay listing. It should look polished and trustworthy.
+**DESIGN REQUIREMENTS:**
+
+1.  **Visual Hierarchy & Composition:**
+    - Use the rule of thirds for balanced composition
+    - Create clear focal points that guide the eye naturally
+    - Ensure the product is the hero element (40-50% of the space)
+    - Use negative space strategically to avoid clutter
+
+2.  **Product Presentation:**
+    - Isolate the product from the original image with perfect edge detection
+    - Remove ALL backgrounds completely - extract just the product
+    - Add professional lighting effects: subtle shadows, highlights, and depth
+    - Position the product at a dynamic angle if appropriate for the style
+    - Apply a soft drop shadow or reflection for dimensionality
+
+3.  **Typography & Text Hierarchy:**
+    - Product name: Large, bold, attention-grabbing (matches style theme)
+    - Key features: Medium size, scannable bullet points or callouts
+    - Specifications: Smaller, organized, easy to read
+    - Use maximum 2-3 font families
+    - Ensure high contrast for readability (text vs background)
+
+4.  **Color Psychology:**
+    - Choose colors that match both the style theme AND product category
+    - Use complementary colors for visual interest
+    - Maintain 60-30-10 color ratio (dominant-secondary-accent)
+    - Ensure brand/product colors are honored if applicable
+
+5.  **Visual Elements & Icons:**
+    - Use modern, minimalist icons for features (battery life, speed, size, etc.)
+    - Ensure icons are consistent in style and weight
+    - Add subtle geometric shapes or patterns that enhance the style
+    - Include trust indicators when appropriate (warranty, quality badges)
+
+6.  **Information Display:**
+    - Highlight 3-5 KEY selling points maximum
+    - Use visual callouts with arrows or lines to point to features
+    - Create information boxes or cards for technical specs
+    - Use icons + text combinations for quick comprehension
+
+7.  **Professional Polish:**
+    - Add subtle gradients or textures that match the style
+    - Ensure all elements are perfectly aligned (use grids)
+    - Apply consistent spacing and padding
+    - Create depth with layering and shadows
+
+**CRITICAL RULES:**
+- NO retail packaging or boxes
+- NO platform-specific logos (eBay, Amazon, Etsy, etc.)
+- NO cluttered layouts - maintain clean, professional aesthetics
+- Text must be LARGE enough to read on mobile devices
+
+**OUTPUT:** A single, print-ready advertisement image at high resolution (minimum 600px width) that stops scrollers and drives conversions.
 `;
 
 const INFO_FROM_IMAGE_PROMPT = `
 You are an expert product identifier and copywriter.
 Based on the user-uploaded image, your task is to:
 1.  **Identify the Product:** Accurately determine the product's brand, model, and official name. If it's a generic item, provide a clear, descriptive name.
-2.  **Generate a Product Description:** Write a detailed, well-structured, and persuasive product description for an eBay listing.
+2.  **Generate a Product Description:** Write a detailed, well-structured, and persuasive product description for online marketplace listings.
     - Use Google Search to find all relevant information about the identified product.
     - The description must include:
         - A catchy title as the first line.
@@ -37,6 +81,7 @@ Based on the user-uploaded image, your task is to:
         - Use markdown bullet points (-).
         - Keep the language professional but easy to understand.
         - Do not include pricing information.
+        - Do not reference any specific marketplace platform (like eBay, Amazon, Etsy, etc.).
         - Base the description strictly on search results.
 
 **Output Format:**
@@ -46,7 +91,7 @@ Return a single, valid JSON object with two keys: "productName" and "productDesc
 `;
 
 const SUGGEST_STYLES_PROMPT = `
-You are a world-class marketing and branding expert. Based on the provided product image and description, your task is to generate 3 to 5 innovative and relevant ad style concepts suitable for an eBay listing.
+You are a world-class marketing and branding expert. Based on the provided product image and description, your task is to generate 3 to 5 innovative and relevant ad style concepts suitable for online marketplace listings.
 
 For each concept, provide:
 1.  **name**: A short, catchy name for the style (e.g., 'Urban Explorer', 'Eco-Minimalist').
@@ -133,7 +178,7 @@ export const generateProductInfoFromImage = async (
 }
 
 
-export const generateEbayAdImage = async (
+export const generateAdImage = async (
     description: string,
     imageBase64: string,
     mimeType: string,

@@ -3,10 +3,11 @@ import ImageUploader from './components/ImageUploader';
 import GeneratedAd from './components/GeneratedAd';
 import AdPreviewModal from './components/AdPreviewModal';
 import HistoryPanel from './components/HistoryPanel';
+import TutorialOverlay from './components/TutorialOverlay';
 import { useLocalStorage } from './hooks/useLocalStorage';
-import { 
-    generateProductInfoFromImage, 
-    generateEbayAdImage,
+import {
+    generateProductInfoFromImage,
+    generateAdImage,
     generateAdStyleSuggestions,
 } from './services/geminiService';
 
@@ -35,35 +36,45 @@ export interface HistoryItem {
 // --- CONSTANTS ---
 
 const DEFAULT_STYLES: Style[] = [
-    { 
-        name: "Modern & Minimalist", 
-        description: "A sleek, contemporary aesthetic using clean lines, line art icons, and a focus on key specifications.", 
-        prompt: "Modern & Minimalist: A sleek, contemporary aesthetic featuring clean lines, ample white space, and a minimalist design. Use simple, single-weight line drawings for icons. The color scheme should be strictly monochrome or have a single, subtle accent color. Use a professional, sans-serif font. Clearly list the top 3-4 specifications. The overall mood is sophisticated, high-tech, and premium." 
+    {
+        name: "Modern & Minimalist",
+        description: "Clean, professional design with bold typography, geometric layouts, and striking color contrasts.",
+        prompt: "Modern & Minimalist: Ultra-clean design with generous white space and grid-based layout. Product positioned prominently at 45-degree angle with crisp drop shadow. Use bold, oversized sans-serif typography (Helvetica/Inter style) for product name. Feature icons in a clean horizontal row with labels. Color palette: Pure white background with ONE bold accent color (electric blue, vibrant orange, or deep purple) used sparingly. Include 3-4 key specs in clean info cards with icon pairs. Add subtle gradient overlays. High contrast, sharp edges, contemporary and premium feel."
     },
-    { 
-        name: "Tech & Dynamic", 
-        description: "An energetic, cutting-edge design with dark backgrounds, neon accents, and bold, geometric typography.", 
-        prompt: "Tech & Dynamic: A cutting-edge and energetic design. Use dark backgrounds, vibrant neon accents (e.g., blues, purples, pinks), and dynamic angles. Typography should be modern, strong, and geometric. Incorporate abstract or circuit-like graphical elements. The mood is innovative, powerful, and exciting." 
+    {
+        name: "Tech & Cyberpunk",
+        description: "Futuristic neon-lit design with dark backgrounds, glowing effects, and digital aesthetics.",
+        prompt: "Tech & Cyberpunk: Dark background (deep navy or pure black) with electric neon accents (cyan, magenta, neon green). Product centered with dramatic lighting and neon glow effects. Typography: Bold, angular, uppercase geometric fonts. Add circuit board patterns, digital grid lines, or hexagonal tech patterns in background. Feature specs in glowing holographic-style cards. Use scan line effects and digital glitches sparingly. Include tech-style icons with neon outlines. Create depth with layered neon highlights and shadows. Mood: High-tech, gaming, cutting-edge innovation."
     },
-    { 
-        name: "Elegant & Professional", 
-        description: "A sophisticated and luxurious style using serif fonts, a refined color palette, and a balanced, classic layout.", 
-        prompt: "Elegant & Professional: A sophisticated and luxurious style. Use classic serif fonts, a refined color palette (e.g., deep blues, gold, charcoal), and a balanced, symmetrical layout. The mood is trustworthy, premium, and high-end." 
+    {
+        name: "Premium Luxury",
+        description: "Sophisticated design with gold accents, elegant serif fonts, and high-end photography style.",
+        prompt: "Premium Luxury: Rich, sophisticated color scheme (deep navy, charcoal black, burgundy) with metallic gold or rose gold accents. Product showcased like fine jewelry with perfect studio lighting and reflection. Typography: Elegant serif fonts (Playfair/Cormorant style) for headers, refined sans-serif for body. Add subtle textures (linen, marble, or leather patterns). Feature specs in ornate bordered frames. Include premium badges (quality seals, warranty icons). Use symmetrical, balanced composition. Soft shadows and highlights for dimension. Mood: Trustworthy, exclusive, high-value."
     },
-    { 
-        name: "Lifestyle & Aspirational", 
-        description: "Showcases the product in a real-world, aspirational context, focusing on the user experience and benefits.", 
-        prompt: "Lifestyle & Aspirational: Showcases the product in a real-world, aspirational context. The product should be integrated into a scene that evokes a desirable feeling or outcome. Use warm, natural lighting and focus on the user's experience. The mood is relatable and inspiring." 
+    {
+        name: "Bold & Energetic",
+        description: "Eye-catching design with vibrant colors, dynamic angles, and explosive visual energy.",
+        prompt: "Bold & Energetic: Vibrant, saturated color palette (think sports brands - bright yellows, reds, electric blues). Product at dynamic 30-degree angle with motion blur or speed lines. Typography: Ultra-bold, condensed fonts with slight italics for movement. Add explosive shapes: diagonal slashes, arrows, starbursts. Feature callouts with angular speech bubbles or badges. Use high contrast complementary colors. Include action-oriented icons (lightning bolts, stars, check marks). Gradient backgrounds from bold to darker tones. Mood: Exciting, youthful, action-packed."
     },
-    { 
-        name: "Vintage & Nostalgic", 
-        description: "A retro-inspired look using textures, muted color palettes, and typography reminiscent of a specific past era.", 
-        prompt: "Vintage & Nostalgic: A retro-inspired look. Use textures (like paper or grain), muted color palettes (e.g., sepia, faded tones), and typography reminiscent of a specific past era (e.g., '70s script, '50s sans-serif). The mood is authentic, charming, and nostalgic." 
+    {
+        name: "Natural & Organic",
+        description: "Earthy, eco-friendly design with natural textures, soft colors, and handcrafted aesthetics.",
+        prompt: "Natural & Organic: Soft, natural color palette (sage green, warm beige, terracotta, soft cream). Product on textured background (wood grain, linen, recycled paper). Typography: Friendly rounded sans-serif or hand-written style fonts. Add organic shapes (leaves, branches, stones) as decorative elements. Feature specs in earth-toned cards with natural borders. Use sustainable/eco icons (leaves, recycling, earth). Include subtle paper textures or watercolor washes. Soft, natural shadows. Mood: Eco-conscious, authentic, wholesome, trustworthy."
     },
-    { 
-        name: "Retro Futurism", 
-        description: "A creative blend of vintage aesthetics with futuristic concepts, often featuring chrome, curves, and a sense of optimism.", 
-        prompt: "Retro Futurism: A creative blend of vintage aesthetics (like '50s or '60s design) with futuristic concepts. Think chrome, smooth curves, and atomic-age motifs. The color palette is often optimistic, with teals, oranges, and creams. The mood is imaginative, stylish, and cool." 
+    {
+        name: "Vintage Retro",
+        description: "Nostalgic design with retro color schemes, classic typography, and aged textures.",
+        prompt: "Vintage Retro: Warm retro color palette (mustard yellow, burnt orange, avocado green, brown tones). Add aged paper texture with subtle grain and coffee stains. Product presented with vintage advertising style. Typography: Classic fonts (Cooper Black, Rockwell, or vintage script). Include retro badges, stamps, and ribbon banners. Feature specs in vintage label designs. Add halftone patterns or screenprint textures. Use muted, desaturated colors. Include retro icons (stars, badges, vintage illustrations). Mood: Nostalgic, authentic, timeless quality."
+    },
+    {
+        name: "Info-Graphic Style",
+        description: "Data-driven design with charts, diagrams, comparison visuals, and statistical presentation.",
+        prompt: "Info-Graphic Style: Clean infographic layout with product as centerpiece. Use visual data: pie charts showing feature breakdowns, bar graphs comparing specs, timeline diagrams. Typography: Clean, modern sans-serif (Roboto/Open Sans). Color code information categories with distinct colors (blue for performance, green for battery, orange for features). Include numbered callouts with connecting lines to product features. Add percentage circles, rating stars, and metric indicators. Use grid system with clear sections. Icons paired with statistics. Background: Light with subtle grid pattern. Mood: Informative, educational, data-focused."
+    },
+    {
+        name: "E-Sports & Gaming",
+        description: "High-energy gaming aesthetic with RGB effects, competitive styling, and esports branding.",
+        prompt: "E-Sports & Gaming: Dramatic dark background with RGB spectrum lighting effects (rainbow gradients, color transitions). Product with glowing RGB highlights and particle effects. Typography: Aggressive, angular gaming fonts (think Valorant/Apex style). Add geometric shapes: triangles, hexagons, sharp angles. Feature gaming-specific icons (FPS counter, ping, resolution). Include performance metrics in gaming HUD style. Use chromatic aberration effects subtly. Add energy streaks, light trails, or digital particles. Color scheme: Deep blacks with vibrant RGB accents. Mood: Competitive, powerful, high-performance."
     },
 ];
 
@@ -112,6 +123,8 @@ function App() {
     
     const [historyItems, setHistoryItems] = useLocalStorage<HistoryItem[]>('ad-gen-history', []);
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+    const [tutorialCompleted, setTutorialCompleted] = useLocalStorage<boolean>('ad-gen-tutorial-completed', false);
+    const [showTutorial, setShowTutorial] = useState(!tutorialCompleted);
 
     // Callbacks & Handlers
     const resetState = useCallback((clearImage: boolean = true) => {
@@ -189,7 +202,7 @@ function App() {
         setError(null);
 
         try {
-            const generatedImageBase64 = await generateEbayAdImage(
+            const generatedImageBase64 = await generateAdImage(
                 productDescription,
                 productImageBase64,
                 productImageFile.type,
@@ -331,6 +344,16 @@ function App() {
         }
     }, [setHistoryItems]);
 
+    const handleTutorialComplete = useCallback(() => {
+        setTutorialCompleted(true);
+        setShowTutorial(false);
+    }, [setTutorialCompleted]);
+
+    const handleTutorialSkip = useCallback(() => {
+        setTutorialCompleted(true);
+        setShowTutorial(false);
+    }, [setTutorialCompleted]);
+
     // Derived state - must be before useEffect that uses them
     const isActionable = !!productImageBase64 && !!productDescription && !isIdentifying;
     const generatedCount = Array.from(imageUrls.values()).filter(v => v !== null).length;
@@ -406,13 +429,24 @@ function App() {
         <>
             <div className="min-h-screen bg-slate-950 text-white font-sans">
                 <header className="py-4 px-6 md:px-8 border-b border-slate-800 grid grid-cols-3 items-center">
+                    <div className="col-start-1 justify-self-start">
+                        <button
+                            onClick={() => setShowTutorial(true)}
+                            className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors"
+                            title="Show tutorial"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
+                            </svg>
+                        </button>
+                    </div>
                     <div className="col-start-2 flex justify-center items-center gap-3">
                         <LogoIcon className="w-7 h-7 text-indigo-400" />
                         <h1 className="text-4xl font-bold text-white tracking-tight">
                             AdSpark <span className="text-indigo-400">AI</span>
                         </h1>
                     </div>
-                    <div className="col-start-3 justify-self-end">
+                    <div className="col-start-3 justify-self-end" data-tutorial="history-button">
                         <button
                             onClick={() => setIsHistoryOpen(true)}
                             className="flex items-center gap-2 text-sm font-semibold text-slate-200 hover:text-white transition-colors"
@@ -428,7 +462,7 @@ function App() {
                         <div className="absolute -inset-4 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-indigo-500/10 rounded-3xl blur-3xl -z-10"></div>
                         {/* Left Column: Input */}
                         <div className="flex flex-col gap-6">
-                            <div>
+                            <div data-tutorial="image-uploader">
                                 <h2 className="text-lg font-semibold text-white mb-2">1. Upload Product <span className="text-indigo-400">Image</span></h2>
                                 <ImageUploader
                                     onImageChange={handleImageChange}
@@ -450,7 +484,7 @@ function App() {
                                 </div>
                             )}
 
-                            <div className={`transition-opacity duration-500 ${isActionable ? 'opacity-100' : 'opacity-50 pointer-events-none'}`}>
+                            <div className={`transition-opacity duration-500 ${isActionable ? 'opacity-100' : 'opacity-50 pointer-events-none'}`} data-tutorial="product-info">
                                 <div className="flex items-center justify-between mb-2">
                                     <h2 className="text-lg font-semibold text-white">2. Review Product <span className="text-indigo-400">Info</span></h2>
                                     {productImageBase64 && (
@@ -511,12 +545,12 @@ function App() {
                             </div>
                             
                             {isActionable && (
-                                <div className="flex flex-col sm:flex-row gap-4 mt-2">
-                                    <button 
+                                <div className="flex flex-col sm:flex-row gap-4 mt-2" data-tutorial="keyboard-shortcuts">
+                                    <button
                                         onClick={handleSaveToHistory}
                                         disabled={!generatedCount}
                                         className="flex-1 w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors disabled:bg-indigo-600/50 disabled:cursor-not-allowed"
-                                        title={!generatedCount ? "Generate at least one ad to save." : "Save session"}
+                                        title={!generatedCount ? "Generate at least one ad to save." : "Save session (Shortcut: S)"}
                                     >
                                         Save to History
                                     </button>
@@ -532,7 +566,7 @@ function App() {
 
                         {/* Right Column: Generated Ads */}
                         <div className="flex flex-col gap-6">
-                            <div>
+                            <div data-tutorial="ad-styles">
                                 <h2 className="text-lg font-semibold text-white mb-2">3. Generate Ad <span className="text-indigo-400">Style</span></h2>
                                 <GeneratedAd
                                     styles={styles}
@@ -563,6 +597,12 @@ function App() {
                 onLoadItem={handleLoadItem}
                 onClearHistory={handleClearHistory}
             />
+            {showTutorial && (
+                <TutorialOverlay
+                    onComplete={handleTutorialComplete}
+                    onSkip={handleTutorialSkip}
+                />
+            )}
         </>
     );
 }
