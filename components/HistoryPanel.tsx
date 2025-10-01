@@ -41,7 +41,7 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({ isOpen, onClose, historyIte
                 <div className="flex flex-col h-full">
                     {/* Header */}
                     <div className="flex items-center justify-between p-4 border-b border-slate-700">
-                        <h2 id="history-panel-title" className="text-xl font-bold text-white">Saved Sessions</h2>
+                        <h2 id="history-panel-title" className="text-xl font-bold text-white">Saved <span className="text-indigo-400">Sessions</span></h2>
                         <button onClick={onClose} className="p-1.5 rounded-full text-slate-200 hover:bg-slate-700 hover:text-white transition-colors">
                             <CloseIcon className="w-6 h-6" />
                         </button>
@@ -51,8 +51,8 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({ isOpen, onClose, historyIte
                     <div className="flex-1 overflow-y-auto p-4 space-y-4">
                         {historyItems.length === 0 ? (
                             <div className="text-center text-slate-300 h-full flex flex-col justify-center items-center">
-                                <p className="text-lg font-semibold text-white">No Saved History</p>
-                                <p className="text-sm mt-2">Generate some ads and click "Save to History" to see them here.</p>
+                                <p className="text-lg font-semibold text-white">No Saved <span className="text-indigo-400">History</span></p>
+                                <p className="text-sm mt-2">Generate some ads and click <span className="text-indigo-300">"Save to History"</span> to see them here.</p>
                             </div>
                         ) : (
                             historyItems.map((item) => (

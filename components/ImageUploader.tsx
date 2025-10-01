@@ -314,7 +314,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageChange, imagePrevi
                 ) : (
                     <div className="text-center text-slate-300 flex flex-col items-center pointer-events-none">
                         <UploadIcon className="w-8 h-8 mx-auto mb-2 text-indigo-400" />
-                        <p className="font-semibold text-white">Upload Product Image</p>
+                        <p className="font-semibold text-white">Upload Product <span className="text-indigo-400">Image</span></p>
                         <p className="text-sm text-slate-300">Click to choose from library or use camera</p>
                     </div>
                 )}
@@ -333,7 +333,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageChange, imagePrevi
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="p-5 border-b border-slate-700 flex justify-between items-center">
-                            <h3 id="image-source-title" className="font-semibold text-lg text-white">Choose Image Source</h3>
+                            <h3 id="image-source-title" className="font-semibold text-lg text-white">Choose Image <span className="text-indigo-400">Source</span></h3>
                             <button onClick={() => setIsChoiceModalOpen(false)} className="p-1.5 rounded-full text-slate-200 hover:bg-slate-700 hover:text-white transition-colors" aria-label="Close">
                                 <CloseIcon className="w-6 h-6" />
                             </button>

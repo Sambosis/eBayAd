@@ -15,6 +15,8 @@ interface GeneratedAdProps {
     isActionable: boolean;
     onSuggestStyles: () => void;
     isSuggestingStyles: boolean;
+    onGenerateAll: () => void;
+    onBulkDownload: () => void;
 }
 
 // Icon Components
@@ -55,32 +57,56 @@ const styleIconMap: { [key: string]: React.FC<{ className?: string }> } = {
 
 // ... (keep all your existing interfaces and icon components)
 
-const GeneratedAd: React.FC<GeneratedAdProps> = ({ styles, onGenerateStyle, imageUrls, onPreview, isActionable, onSuggestStyles, isSuggestingStyles }) => {
+const GeneratedAd: React.FC<GeneratedAdProps> = ({ styles, onGenerateStyle, imageUrls, onPreview, isActionable, onSuggestStyles, isSuggestingStyles, onGenerateAll, onBulkDownload }) => {
     const [hoveredStyle, setHoveredStyle] = useState<string | null>(null);
+
+    const generatedCount = Array.from(imageUrls.values()).filter(v => v !== null).length;
+    const isGenerating = Array.from(imageUrls.values()).some(v => v === null) && imageUrls.size > 0;
 
     return (
         <>
             <div className="text-center mb-4">
                 <h2 className="text-lg font-semibold text-slate-200">
-                    Click a Style to Generate
+                    Click a Style to <span className="text-indigo-400">Generate</span>
                 </h2>
-                <button
-                    onClick={onSuggestStyles}
-                    disabled={!isActionable || isSuggestingStyles}
-                    className="mt-2 inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 disabled:bg-slate-800/50 disabled:cursor-not-allowed text-indigo-300 font-semibold py-2.5 px-5 rounded-lg transition-all duration-300 ease-in-out text-sm"
-                >
-                    {isSuggestingStyles ? (
-                        <>
-                            <SpinnerIcon className="w-4 h-4" />
-                            Suggesting...
-                        </>
-                    ) : (
-                        <>
-                            <LightbulbIcon className="w-4 h-4" />
-                            Suggest Styles with AI
-                        </>
+                <div className="mt-2 flex flex-wrap gap-2 justify-center">
+                    <button
+                        onClick={onSuggestStyles}
+                        disabled={!isActionable || isSuggestingStyles}
+                        className="inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 disabled:bg-slate-800/50 disabled:cursor-not-allowed text-indigo-300 font-semibold py-2.5 px-5 rounded-lg transition-all duration-300 ease-in-out text-sm"
+                    >
+                        {isSuggestingStyles ? (
+                            <>
+                                <SpinnerIcon className="w-4 h-4" />
+                                Suggesting...
+                            </>
+                        ) : (
+                            <>
+                                <LightbulbIcon className="w-4 h-4" />
+                                Suggest Styles
+                            </>
+                        )}
+                    </button>
+                    <button
+                        onClick={onGenerateAll}
+                        disabled={!isActionable || isGenerating}
+                        className="inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-600/50 disabled:cursor-not-allowed text-white font-semibold py-2.5 px-5 rounded-lg transition-all duration-300 ease-in-out text-sm"
+                    >
+                        <SparklesIcon className="w-4 h-4" />
+                        Generate All
+                    </button>
+                    {generatedCount > 0 && (
+                        <button
+                            onClick={onBulkDownload}
+                            className="inline-flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2.5 px-5 rounded-lg transition-all duration-300 ease-in-out text-sm"
+                        >
+                            <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                            </svg>
+                            Download All ({generatedCount})
+                        </button>
                     )}
-                </button>
+                </div>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 {styles.map((style) => {

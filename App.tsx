@@ -131,7 +131,7 @@ function App() {
             resetState();
             return;
         }
-        
+
         resetState();
         setProductImageFile(file);
         setError(null);
@@ -151,6 +151,24 @@ function App() {
             setIsIdentifying(false);
         }
     }, [resetState]);
+
+    const handleRegenerateDescription = useCallback(async () => {
+        if (!productImageBase64 || !productImageFile) return;
+
+        setIsIdentifying(true);
+        setError(null);
+
+        try {
+            const info = await generateProductInfoFromImage(productImageBase64, productImageFile.type);
+            setProductName(info.productName);
+            setProductDescription(info.productDescription);
+        } catch (e: any) {
+            console.error(e);
+            setError(e.message || 'Failed to regenerate product description. Please try again.');
+        } finally {
+            setIsIdentifying(false);
+        }
+    }, [productImageBase64, productImageFile]);
 
     const handleGenerateStyle = useCallback(async (styleName: string) => {
         if (!productImageBase64 || !productImageFile || !productDescription) return;
@@ -203,6 +221,42 @@ function App() {
             setIsSuggestingStyles(false);
         }
     }, [productDescription, productImageBase64, productImageFile]);
+
+    const handleGenerateAll = useCallback(async () => {
+        if (!productImageBase64 || !productImageFile || !productDescription) return;
+
+        const stylesToGenerate = styles.filter(style => !imageUrls.has(style.name));
+
+        for (const style of stylesToGenerate) {
+            handleGenerateStyle(style.name);
+            // Add a small delay to avoid overwhelming the API
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+    }, [styles, imageUrls, handleGenerateStyle, productImageBase64, productImageFile, productDescription]);
+
+    const handleBulkDownload = useCallback(async () => {
+        const JSZip = (await import('jszip')).default;
+        const zip = new JSZip();
+
+        const generatedAds = Array.from(imageUrls.entries())
+            .filter(([, url]) => url !== null);
+
+        for (const [name, url] of generatedAds) {
+            if (url) {
+                const base64Data = url.split(',')[1];
+                const safeStyleName = name.replace(/[^a-zA-Z0-9]/g, '-');
+                zip.file(`${safeStyleName}.png`, base64Data, { base64: true });
+            }
+        }
+
+        const blob = await zip.generateAsync({ type: 'blob' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `${productName.replace(/[^a-zA-Z0-9]/g, '-')}-ads.zip`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }, [imageUrls, productName]);
     
     const handleSaveToHistory = useCallback(() => {
         if (!productImageFile || !productImageBase64 || !productName) {
@@ -262,6 +316,11 @@ function App() {
         }
     }, [setHistoryItems]);
 
+    // Derived state - must be before useEffect that uses them
+    const isActionable = !!productImageBase64 && !!productDescription && !isIdentifying;
+    const generatedCount = Array.from(imageUrls.values()).filter(v => v !== null).length;
+    const isGenerating = Array.from(imageUrls.values()).some(v => v === null) && imageUrls.size > 0;
+
     // Auto-resize textarea
     React.useEffect(() => {
         const textarea = descriptionTextAreaRef.current;
@@ -271,8 +330,34 @@ function App() {
         }
     }, [productDescription]);
 
-    const isActionable = !!productImageBase64 && !!productDescription && !isIdentifying;
-    const generatedCount = Array.from(imageUrls.values()).filter(v => v !== null).length;
+    // Keyboard shortcuts
+    React.useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Don't trigger if user is typing in an input/textarea
+            if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+                return;
+            }
+
+            // G - Generate All
+            if (e.key === 'g' || e.key === 'G') {
+                if (isActionable && !isGenerating) {
+                    e.preventDefault();
+                    handleGenerateAll();
+                }
+            }
+
+            // S - Save to History
+            if (e.key === 's' || e.key === 'S') {
+                if (generatedCount > 0) {
+                    e.preventDefault();
+                    handleSaveToHistory();
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isActionable, generatedCount, isGenerating, handleGenerateAll, handleSaveToHistory]);
 
     return (
         <>
@@ -295,11 +380,13 @@ function App() {
                 </header>
 
                 <main className="p-4 md:p-8">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-7xl mx-auto">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-7xl mx-auto relative">
+                        {/* Gradient glow effect */}
+                        <div className="absolute -inset-4 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-indigo-500/10 rounded-3xl blur-3xl -z-10"></div>
                         {/* Left Column: Input */}
                         <div className="flex flex-col gap-6">
                             <div>
-                                <h2 className="text-lg font-semibold text-slate-200 mb-2">1. Upload Product Image</h2>
+                                <h2 className="text-lg font-semibold text-white mb-2">1. Upload Product <span className="text-indigo-400">Image</span></h2>
                                 <ImageUploader
                                     onImageChange={handleImageChange}
                                     imagePreviewUrl={productImageFile ? URL.createObjectURL(productImageFile) : null}
@@ -309,7 +396,7 @@ function App() {
 
                             {isIdentifying && (
                                 <div className="text-center p-4 bg-slate-900 rounded-lg">
-                                    <p className="text-indigo-300 animate-pulse">AI is identifying your product...</p>
+                                    <p className="text-white animate-pulse"><span className="text-indigo-400">AI</span> is identifying your product...</p>
                                 </div>
                             )}
 
@@ -321,7 +408,21 @@ function App() {
                             )}
 
                             <div className={`transition-opacity duration-500 ${isActionable ? 'opacity-100' : 'opacity-50 pointer-events-none'}`}>
-                                <h2 className="text-lg font-semibold text-slate-200 mb-2">2. Review Product Info</h2>
+                                <div className="flex items-center justify-between mb-2">
+                                    <h2 className="text-lg font-semibold text-white">2. Review Product <span className="text-indigo-400">Info</span></h2>
+                                    {productImageBase64 && (
+                                        <button
+                                            onClick={handleRegenerateDescription}
+                                            disabled={isIdentifying}
+                                            className="inline-flex items-center gap-2 text-sm bg-slate-800 hover:bg-slate-700 disabled:bg-slate-800/50 disabled:cursor-not-allowed text-indigo-300 font-semibold py-1.5 px-3 rounded-md transition-all"
+                                        >
+                                            <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                                            </svg>
+                                            {isIdentifying ? 'Regenerating...' : 'Regenerate'}
+                                        </button>
+                                    )}
+                                </div>
                                 <div className="flex flex-col gap-4">
                                     <input
                                         type="text"
@@ -331,15 +432,22 @@ function App() {
                                         className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition"
                                         disabled={!isActionable}
                                     />
-                                    <textarea
-                                        ref={descriptionTextAreaRef}
-                                        value={productDescription}
-                                        onChange={(e) => setProductDescription(e.target.value)}
-                                        placeholder="Product Description"
-                                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition resize-none overflow-hidden"
-                                        rows={8}
-                                        disabled={!isActionable}
-                                    />
+                                    <div className="relative">
+                                        <textarea
+                                            ref={descriptionTextAreaRef}
+                                            value={productDescription}
+                                            onChange={(e) => setProductDescription(e.target.value)}
+                                            placeholder="Product Description"
+                                            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 pb-8 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition resize-none overflow-hidden"
+                                            rows={8}
+                                            disabled={!isActionable}
+                                        />
+                                        <div className="absolute bottom-2 right-2 flex items-center gap-2">
+                                            <span className={`text-xs ${productDescription.length > 1000 ? 'text-yellow-400' : 'text-slate-400'}`}>
+                                                {productDescription.length} characters
+                                            </span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             
@@ -366,7 +474,7 @@ function App() {
                         {/* Right Column: Generated Ads */}
                         <div className="flex flex-col gap-6">
                             <div>
-                                <h2 className="text-lg font-semibold text-slate-200 mb-2">3. Generate Ad Style</h2>
+                                <h2 className="text-lg font-semibold text-white mb-2">3. Generate Ad <span className="text-indigo-400">Style</span></h2>
                                 <GeneratedAd
                                     styles={styles}
                                     onGenerateStyle={handleGenerateStyle}
@@ -375,6 +483,8 @@ function App() {
                                     isActionable={isActionable}
                                     onSuggestStyles={handleSuggestStyles}
                                     isSuggestingStyles={isSuggestingStyles}
+                                    onGenerateAll={handleGenerateAll}
+                                    onBulkDownload={handleBulkDownload}
                                 />
                             </div>
                         </div>
