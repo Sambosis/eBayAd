@@ -38,7 +38,10 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({ isOpen, onClose, historyIte
                 aria-modal="true"
                 aria-labelledby="history-panel-title"
             >
-                <div className="flex flex-col h-full">
+                {/* Gradient glow effect on the left edge */}
+                <div className="absolute -left-8 top-0 bottom-0 w-8 bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-transparent blur-xl pointer-events-none"></div>
+
+                <div className="flex flex-col h-full relative">
                     {/* Header */}
                     <div className="flex items-center justify-between p-4 border-b border-slate-700">
                         <h2 id="history-panel-title" className="text-xl font-bold text-white">Saved <span className="text-indigo-400">Sessions</span></h2>
@@ -55,26 +58,33 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({ isOpen, onClose, historyIte
                                 <p className="text-sm mt-2">Generate some ads and click <span className="text-indigo-300">"Save to History"</span> to see them here.</p>
                             </div>
                         ) : (
-                            historyItems.map((item) => (
-                                <div key={item.id} className="bg-slate-900/70 p-4 rounded-lg border border-slate-700 flex gap-4">
+                            historyItems.map((item, index) => (
+                                <div
+                                    key={item.id}
+                                    className="bg-slate-900/70 p-4 rounded-lg border border-slate-700 flex gap-4 hover:border-indigo-500/50 hover:bg-slate-900 transition-all duration-300 animate-[slideIn_0.3s_ease-out] relative group"
+                                    style={{ animationDelay: `${index * 50}ms` }}
+                                >
+                                    {/* Subtle gradient glow on hover */}
+                                    <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/0 to-purple-500/0 group-hover:from-indigo-500/5 group-hover:to-purple-500/5 rounded-lg transition-all duration-300 pointer-events-none"></div>
+
                                     <img
                                         src={`data:${item.productImage.type};base64,${item.productImage.base64}`}
                                         alt={item.productName}
-                                        className="w-20 h-20 object-contain rounded-md bg-slate-800"
+                                        className="w-20 h-20 object-contain rounded-md bg-slate-800 relative z-10"
                                     />
-                                    <div className="flex-1">
+                                    <div className="flex-1 relative z-10">
                                         <p className="font-semibold text-white truncate" title={item.productName}>
                                             {item.productName || 'Untitled Product'}
                                         </p>
-                                        <p className="text-xs text-slate-400">
+                                        <p className="text-xs text-slate-300">
                                             {new Date(item.createdAt).toLocaleString()}
                                         </p>
-                                        <p className="text-xs text-slate-400 mt-1">
+                                        <p className="text-xs text-slate-300 mt-1">
                                             {item.ads.length} ad{item.ads.length !== 1 ? 's' : ''} generated
                                         </p>
                                         <button
                                             onClick={() => onLoadItem(item.id)}
-                                            className="mt-2 text-sm bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-1 px-3 rounded-md transition-colors"
+                                            className="mt-2 text-sm bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-1 px-3 rounded-md transition-all duration-200 hover:scale-105"
                                         >
                                             Load Session
                                         </button>

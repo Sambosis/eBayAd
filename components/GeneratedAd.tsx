@@ -177,8 +177,9 @@ const GeneratedAd: React.FC<GeneratedAdProps> = ({ styles, onGenerateStyle, imag
                             )}
 
                             <div
-                                className={`relative aspect-square bg-slate-900 rounded-lg overflow-hidden border border-slate-700 transition-all duration-300 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-slate-900
-                                ${isActionable && !imageUrl && !isGenerating ? 'cursor-pointer hover:border-indigo-500 hover:scale-[1.03]' : 'cursor-default'}
+                                className={`relative aspect-square bg-slate-900 rounded-lg overflow-hidden border transition-all duration-300 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-slate-900
+                                ${imageUrl ? 'border-indigo-500/50 shadow-lg shadow-indigo-500/20 cursor-pointer hover:scale-[1.02]' : 'border-slate-700'}
+                                ${isActionable && !imageUrl && !isGenerating ? 'cursor-pointer hover:border-indigo-500 hover:scale-[1.03]' : !imageUrl && 'cursor-default'}
                                 ${!isActionable && 'opacity-50'}
                             `}
                                 onClick={() => {
@@ -240,9 +241,17 @@ const GeneratedAd: React.FC<GeneratedAdProps> = ({ styles, onGenerateStyle, imag
 
                                 {imageUrl && (
                                     <>
-                                        <img src={imageUrl} alt={`Generated ad in ${style.name} style`} className="w-full h-full object-cover" />
+                                        <img
+                                            src={imageUrl}
+                                            alt={`Generated ad in ${style.name} style`}
+                                            className="w-full h-full object-cover animate-[fadeInScale_0.5s_ease-out]"
+                                        />
                                         <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                                             <p className="text-white font-bold text-lg">Preview</p>
+                                        </div>
+                                        {/* Success indicator - appears briefly when ad is generated */}
+                                        <div className="absolute top-2 left-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg animate-[fadeInScale_0.3s_ease-out]">
+                                            ✓ Generated
                                         </div>
                                     </>
                                 )}
