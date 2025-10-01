@@ -61,13 +61,13 @@ const GeneratedAd: React.FC<GeneratedAdProps> = ({ styles, onGenerateStyle, imag
     return (
         <>
             <div className="text-center mb-4">
-                <h2 className="text-lg font-semibold text-slate-200">
+                <h2 className="text-lg font-semibold text-slate-500">
                     Click a Style to Generate
                 </h2>
                 <button
                     onClick={onSuggestStyles}
                     disabled={!isActionable || isSuggestingStyles}
-                    className="mt-2 inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 disabled:bg-slate-800/50 disabled:cursor-not-allowed text-indigo-300 font-semibold py-2.5 px-5 rounded-lg transition-all duration-300 ease-in-out text-sm"
+                    className="mt-2 inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700/80 disabled:bg-slate-800/50 disabled:cursor-not-allowed text-indigo-300 font-semibold py-2 px-4 rounded-lg transition-all duration-300 ease-in-out text-sm"
                 >
                     {isSuggestingStyles ? (
                         <>
@@ -100,7 +100,7 @@ const GeneratedAd: React.FC<GeneratedAdProps> = ({ styles, onGenerateStyle, imag
                                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 w-64 p-3 bg-slate-800 border border-slate-600 rounded-lg shadow-xl">
                                     <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-slate-800"></div>
                                     <p className="text-xs font-semibold text-indigo-300 mb-1">{style.name}</p>
-                                    <p className="text-xs text-slate-100 leading-relaxed">{style.description}</p>
+                                    <p className="text-xs text-slate-200 leading-relaxed">{style.description}</p>
                                 </div>
                             )}
 
@@ -151,7 +151,7 @@ const GeneratedAd: React.FC<GeneratedAdProps> = ({ styles, onGenerateStyle, imag
                                 )}
                                 
                                 {!imageUrl && !isGenerating && (
-                                    <div className="absolute inset-0 bg-slate-900/50 flex flex-col items-center justify-center text-center p-3 sm:p-4 text-slate-100">
+                                    <div className="absolute inset-0 bg-slate-900/50 flex flex-col items-center justify-center text-center p-3 sm:p-4 text-slate-300">
                                         <div className="absolute inset-0 overflow-hidden rounded-lg">
                                             <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-900" />
                                             <div className="absolute inset-0 opacity-70 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.4),_transparent_60%)]" />
@@ -170,7 +170,7 @@ const GeneratedAd: React.FC<GeneratedAdProps> = ({ styles, onGenerateStyle, imag
 
                                                 {/* Simplified description - just show truncated version */}
                                                 <div className="mt-4 flex-1 overflow-hidden">
-                                                    <p className="text-xs leading-relaxed text-slate-100 line-clamp-2">
+                                                    <p className="text-xs leading-relaxed text-slate-300 line-clamp-2">
                                                         {style.description}
                                                     </p>
                                                     <p className="mt-1 text-[0.65rem] text-indigo-300 font-medium">
@@ -178,7 +178,7 @@ const GeneratedAd: React.FC<GeneratedAdProps> = ({ styles, onGenerateStyle, imag
                                                     </p>
                                                 </div>
 
-                                                <div className="mt-5 flex items-center justify-between text-[0.65rem] font-semibold uppercase tracking-[0.45em] text-slate-100">
+                                                <div className="mt-5 flex items-center justify-between text-[0.65rem] font-semibold uppercase tracking-[0.45em] text-slate-300">
                                                     <span>{isActionable ? 'Ready' : 'Unavailable'}</span>
                                                     {isActionable && (
                                                         <span className="flex items-center gap-2 text-indigo-300">

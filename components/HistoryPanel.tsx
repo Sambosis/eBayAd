@@ -42,7 +42,7 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({ isOpen, onClose, historyIte
                     {/* Header */}
                     <div className="flex items-center justify-between p-4 border-b border-slate-700">
                         <h2 id="history-panel-title" className="text-xl font-bold text-white">Saved Sessions</h2>
-                        <button onClick={onClose} className="p-1.5 rounded-full text-slate-200 hover:bg-slate-700 hover:text-white transition-colors">
+                        <button onClick={onClose} className="p-1 rounded-full text-slate-400 hover:bg-slate-700 hover:text-white transition-colors">
                             <CloseIcon className="w-6 h-6" />
                         </button>
                     </div>
@@ -50,9 +50,9 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({ isOpen, onClose, historyIte
                     {/* Content */}
                     <div className="flex-1 overflow-y-auto p-4 space-y-4">
                         {historyItems.length === 0 ? (
-                            <div className="text-center text-slate-300 h-full flex flex-col justify-center items-center">
-                                <p className="text-lg font-semibold text-white">No Saved History</p>
-                                <p className="text-sm mt-2">Generate some ads and click "Save to History" to see them here.</p>
+                            <div className="text-center text-slate-400 h-full flex flex-col justify-center items-center">
+                                <p className="text-lg">No Saved History</p>
+                                <p className="text-sm">Generate some ads and click "Save to History" to see them here.</p>
                             </div>
                         ) : (
                             historyItems.map((item) => (
@@ -66,10 +66,10 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({ isOpen, onClose, historyIte
                                         <p className="font-semibold text-white truncate" title={item.productName}>
                                             {item.productName || 'Untitled Product'}
                                         </p>
-                                        <p className="text-xs text-slate-300">
+                                        <p className="text-xs text-slate-400">
                                             {new Date(item.createdAt).toLocaleString()}
                                         </p>
-                                        <p className="text-xs text-slate-300 mt-1">
+                                        <p className="text-xs text-slate-400 mt-1">
                                             {item.ads.length} ad{item.ads.length !== 1 ? 's' : ''} generated
                                         </p>
                                         <button

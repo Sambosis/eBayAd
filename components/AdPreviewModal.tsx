@@ -97,7 +97,7 @@ const AdPreviewModal: React.FC<AdPreviewModalProps> = ({ selectedAd, onClose }) 
             >
                 <button
                     onClick={onClose}
-                    className="absolute top-2 right-2 text-slate-200 hover:text-white transition-colors z-20 p-2 bg-slate-900/70 rounded-full hover:bg-slate-900"
+                    className="absolute top-2 right-2 text-slate-400 hover:text-white transition-colors z-20 p-1 bg-slate-900/50 rounded-full"
                     aria-label="Close preview"
                 >
                     <CloseIcon className="w-6 h-6" />
