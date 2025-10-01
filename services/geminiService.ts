@@ -55,13 +55,13 @@ Your task is to create a compelling, professional-grade advertisement image for 
     - Create depth with layering and shadows
 
 **CRITICAL RULES:**
-- NO retail packaging, boxes, or external branding visible
+- NO retail packaging or boxes
 - NO platform-specific logos (eBay, Amazon, Etsy, etc.)
-- NO generic stock photos - use only the provided product image
 - NO cluttered layouts - maintain clean, professional aesthetics
 - Text must be LARGE enough to read on mobile devices
+- All Text MUST be properly spelled and WITHOUT typos. 
 
-**OUTPUT:** A single, print-ready advertisement image at high resolution (minimum 1200px width) that stops scrollers and drives conversions.
+**OUTPUT:** A single, print-ready advertisement image at high resolution that stops scrollers and drives conversions.
 `;
 
 const INFO_FROM_IMAGE_PROMPT = `
