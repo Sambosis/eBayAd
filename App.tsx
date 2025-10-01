@@ -171,23 +171,7 @@ function App() {
         }
     }, [productImageBase64, productImageFile]);
 
-    const handleRegenerateDescription = useCallback(async () => {
-        if (!productImageBase64 || !productImageFile) return;
 
-        setIsIdentifying(true);
-        setError(null);
-
-        try {
-            const info = await generateProductInfoFromImage(productImageBase64, productImageFile.type);
-            setProductName(info.productName);
-            setProductDescription(info.productDescription);
-        } catch (e: any) {
-            console.error(e);
-            setError(e.message || 'Failed to regenerate product description. Please try again.');
-        } finally {
-            setIsIdentifying(false);
-        }
-    }, [productImageBase64, productImageFile]);
 
     const handleGenerateStyle = useCallback(async (styleName: string) => {
         if (!productImageBase64 || !productImageFile || !productDescription) return;
@@ -430,9 +414,6 @@ function App() {
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-7xl mx-auto relative">
                         {/* Gradient glow effect */}
                         <div className="absolute -inset-4 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-indigo-500/10 rounded-3xl blur-3xl -z-10"></div>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-7xl mx-auto relative">
-                        {/* Gradient glow effect */}
-                        <div className="absolute -inset-4 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-indigo-500/10 rounded-3xl blur-3xl -z-10"></div>
                         {/* Left Column: Input */}
                         <div className="flex flex-col gap-6">
                             <div>
@@ -446,7 +427,6 @@ function App() {
 
                             {isIdentifying && (
                                 <div className="text-center p-4 bg-slate-900 rounded-lg">
-                                    <p className="text-white animate-pulse"><span className="text-indigo-400">AI</span> is identifying your product...</p>
                                     <p className="text-white animate-pulse"><span className="text-indigo-400">AI</span> is identifying your product...</p>
                                 </div>
                             )}
@@ -550,8 +530,6 @@ function App() {
                                     isActionable={isActionable}
                                     onSuggestStyles={handleSuggestStyles}
                                     isSuggestingStyles={isSuggestingStyles}
-                                    onGenerateAll={handleGenerateAll}
-                                    onBulkDownload={handleBulkDownload}
                                     onGenerateAll={handleGenerateAll}
                                     onBulkDownload={handleBulkDownload}
                                 />
