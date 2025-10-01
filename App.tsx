@@ -100,6 +100,8 @@ function App() {
     
     const [styles, setStyles] = useState<Style[]>(DEFAULT_STYLES);
     const [imageUrls, setImageUrls] = useState<Map<string, string | null>>(new Map());
+    const [generationStartTime, setGenerationStartTime] = useState<number | null>(null);
+    const [estimatedTimeRemaining, setEstimatedTimeRemaining] = useState<number | null>(null);
 
     const [isIdentifying, setIsIdentifying] = useState(false);
     const [isSuggestingStyles, setIsSuggestingStyles] = useState(false);
@@ -179,6 +181,10 @@ function App() {
         const currentStyle = styles.find(s => s.name === styleName);
         if (!currentStyle) return;
 
+        const startTime = Date.now();
+
+        // Set generation start time if this is the first generation
+        setGenerationStartTime(prev => prev || startTime);
         setImageUrls(prev => new Map(prev).set(styleName, null));
         setError(null);
 
@@ -191,6 +197,12 @@ function App() {
             );
             const imageUrl = `data:image/png;base64,${generatedImageBase64}`;
             setImageUrls(prev => new Map(prev).set(styleName, imageUrl));
+
+            // Calculate average time and update estimate
+            const endTime = Date.now();
+            const generationTime = endTime - startTime;
+            // Average generation time is around 15-30 seconds per ad
+            setEstimatedTimeRemaining(generationTime);
         } catch(e: any) {
             console.error(e);
             setError(e.message || `Failed to generate ad for style: ${styleName}`);
@@ -532,6 +544,7 @@ function App() {
                                     isSuggestingStyles={isSuggestingStyles}
                                     onGenerateAll={handleGenerateAll}
                                     onBulkDownload={handleBulkDownload}
+                                    estimatedTimePerAd={estimatedTimeRemaining}
                                 />
                             </div>
                         </div>

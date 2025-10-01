@@ -17,6 +17,7 @@ interface GeneratedAdProps {
     isSuggestingStyles: boolean;
     onGenerateAll: () => void;
     onBulkDownload: () => void;
+    estimatedTimePerAd?: number | null;
 }
 
 // Icon Components
@@ -57,11 +58,25 @@ const styleIconMap: { [key: string]: React.FC<{ className?: string }> } = {
 
 // ... (keep all your existing interfaces and icon components)
 
-const GeneratedAd: React.FC<GeneratedAdProps> = ({ styles, onGenerateStyle, imageUrls, onPreview, isActionable, onSuggestStyles, isSuggestingStyles, onGenerateAll, onBulkDownload }) => {
+const GeneratedAd: React.FC<GeneratedAdProps> = ({ styles, onGenerateStyle, imageUrls, onPreview, isActionable, onSuggestStyles, isSuggestingStyles, onGenerateAll, onBulkDownload, estimatedTimePerAd }) => {
     const [hoveredStyle, setHoveredStyle] = useState<string | null>(null);
 
     const generatedCount = Array.from(imageUrls.values()).filter(v => v !== null).length;
-    const isGenerating = Array.from(imageUrls.values()).some(v => v === null) && imageUrls.size > 0;
+    const generatingCount = Array.from(imageUrls.values()).filter(v => v === null).length;
+    const isGenerating = generatingCount > 0;
+    const totalStyles = styles.length;
+
+    // Calculate estimated time remaining
+    const estimatedTimeRemaining = estimatedTimePerAd && generatingCount > 0
+        ? Math.ceil((estimatedTimePerAd * generatingCount) / 1000)
+        : null;
+
+    const formatTime = (seconds: number) => {
+        if (seconds < 60) return `${seconds}s`;
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}m ${secs}s`;
+    };
 
     return (
         <>
@@ -69,6 +84,37 @@ const GeneratedAd: React.FC<GeneratedAdProps> = ({ styles, onGenerateStyle, imag
                 <h2 className="text-lg font-semibold text-slate-200">
                     Click a Style to <span className="text-indigo-400">Generate</span>
                 </h2>
+
+                {/* Progress Indicator */}
+                {(generatedCount > 0 || isGenerating) && (
+                    <div className="mt-3 mb-2">
+                        <div className="flex items-center justify-center gap-3 text-sm flex-wrap">
+                            <span className="text-slate-300">
+                                {generatedCount} of {totalStyles} generated
+                            </span>
+                            {isGenerating && (
+                                <>
+                                    <span className="inline-flex items-center gap-2 text-indigo-300">
+                                        <SpinnerIcon className="w-4 h-4" />
+                                        {generatingCount} in progress
+                                    </span>
+                                    {estimatedTimeRemaining && (
+                                        <span className="text-slate-400 text-xs">
+                                            ~{formatTime(estimatedTimeRemaining)} remaining
+                                        </span>
+                                    )}
+                                </>
+                            )}
+                        </div>
+                        {/* Progress Bar */}
+                        <div className="mt-2 w-full max-w-md mx-auto h-2 bg-slate-800 rounded-full overflow-hidden">
+                            <div
+                                className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-500 ease-out"
+                                style={{ width: `${(generatedCount / totalStyles) * 100}%` }}
+                            />
+                        </div>
+                    </div>
+                )}
                 <div className="mt-2 flex flex-wrap gap-2 justify-center">
                     <button
                         onClick={onSuggestStyles}
@@ -162,8 +208,33 @@ const GeneratedAd: React.FC<GeneratedAdProps> = ({ styles, onGenerateStyle, imag
                                 )}
 
                                 {isGenerating && (
-                                    <div className="absolute inset-0 bg-slate-800 animate-pulse flex items-center justify-center">
-                                        <SpinnerIcon className="w-8 h-8 text-slate-400" />
+                                    <div className="absolute inset-0 bg-slate-900 overflow-hidden">
+                                        {/* Animated Skeleton Loader */}
+                                        <div className="absolute inset-0 bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800 animate-pulse">
+                                            {/* Shimmer effect */}
+                                            <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-slate-700/50 to-transparent" />
+                                        </div>
+
+                                        {/* Skeleton Content */}
+                                        <div className="relative z-10 flex h-full flex-col justify-between p-4 sm:p-5">
+                                            <div className="flex items-start gap-3">
+                                                <div className="h-10 w-10 rounded-full bg-slate-800 animate-pulse" />
+                                                <div className="flex-1">
+                                                    <div className="h-3 w-16 bg-slate-800 rounded animate-pulse mb-2" />
+                                                    <div className="h-4 w-32 bg-slate-800 rounded animate-pulse" />
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <div className="h-3 w-full bg-slate-800 rounded animate-pulse" />
+                                                <div className="h-3 w-3/4 bg-slate-800 rounded animate-pulse" />
+                                            </div>
+
+                                            <div className="flex items-center justify-between">
+                                                <div className="h-3 w-20 bg-slate-800 rounded animate-pulse" />
+                                                <SpinnerIcon className="w-5 h-5 text-indigo-400" />
+                                            </div>
+                                        </div>
                                     </div>
                                 )}
 
