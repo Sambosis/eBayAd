@@ -33,6 +33,7 @@ Your task is to create a compelling, professional-grade advertisement image for 
 4.  **Color Psychology:**
     - Choose colors that match both the style theme AND product category
     - Use complementary colors for visual interest
+    - **Background Contrast:** To ensure the product stands out, select a background that contrasts with the product's main color. For dark-colored products, prefer a light background. For light-colored products, prefer a dark background. This contrast is crucial for visual impact.
     - Maintain 60-30-10 color ratio (dominant-secondary-accent)
     - Ensure brand/product colors are honored if applicable
 
@@ -59,6 +60,8 @@ Your task is to create a compelling, professional-grade advertisement image for 
 - NO platform-specific logos (eBay, Amazon, Etsy, etc.)
 - NO cluttered layouts - maintain clean, professional aesthetics
 - Text must be LARGE enough to read on mobile devices
+- Background MUST contrast with the product's main color. For dark-colored products, use a light background. For light-colored products, use a dark background.
+
 - All Text MUST be properly spelled and WITHOUT typos. 
 
 **OUTPUT:** A single, print-ready advertisement image at high resolution that stops scrollers and drives conversions.
@@ -74,7 +77,6 @@ Based on the user-uploaded image, your task is to:
         - A catchy title as the first line.
         - An introduction summarizing the product's main benefit.
         - A bulleted list of key features and specifications.
-        - A statement that the condition is "Brand New".
         - A list of what's typically included in the box.
         - A brief mention of the target audience.
     - **Formatting Rules:**
