@@ -168,7 +168,14 @@ export const generateProductInfoFromImage = async (
 
         const parsed = JSON.parse(jsonText);
         if (parsed.productName && parsed.productDescription) {
-            return parsed;
+            // The model is instructed to escape newlines as \\n. JSON.parse turns that into a literal `\n` string.
+            // We need to replace those literals with actual newline characters for rendering.
+            const correctlyFormattedDescription = parsed.productDescription.replace(/\\n/g, '\n');
+
+            return {
+                productName: parsed.productName,
+                productDescription: correctlyFormattedDescription,
+            };
         } else {
              throw new Error("Invalid JSON structure in AI response.");
         }
@@ -193,7 +200,7 @@ export const generateAdImage = async (
     const prompt = PROMPT_TEMPLATE(description, style);
 
     const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-image-preview',
+        model: 'gemini-2.5-flash-image',
         contents: {
             parts: [
                 {

@@ -99,6 +99,42 @@ const LogoIcon: React.FC<{ className?: string }> = ({ className }) => (
     </svg>
 );
 
+const FormattedDescription: React.FC<{ text: string; placeholder: string }> = ({ text, placeholder }) => {
+    if (!text) {
+        return <p className="text-slate-400">{placeholder}</p>;
+    }
+
+    const renderWithFormatting = (line: string) => {
+        const parts = line.split(/(\*\*.*?\*\*)/g).filter(Boolean); 
+        return parts.map((part, index) => 
+            part.startsWith('**') && part.endsWith('**') ? 
+            <strong key={index}>{part.slice(2, -2)}</strong> : 
+            part
+        );
+    };
+    
+    return (
+        <div className="text-slate-200 text-sm space-y-1">
+        {text.split('\n').map((line, index) => {
+            if (line.trim().startsWith('- ')) {
+                const content = line.trim().substring(2);
+                return (
+                    <div key={index} className="flex items-start pl-2">
+                        <span className="mr-2 mt-1 text-indigo-400">•</span>
+                        <p className="flex-1">{renderWithFormatting(content)}</p>
+                    </div>
+                );
+            }
+            if (line.trim() === '') {
+                return <div key={index} className="h-2"></div>;
+            }
+            return (
+                <p key={index}>{renderWithFormatting(line)}</p>
+            );
+        })}
+        </div>
+    );
+};
 
 // --- MAIN APP COMPONENT ---
 
@@ -108,6 +144,7 @@ function App() {
     const [productImageBase64, setProductImageBase64] = useState<string | null>(null);
     const [productName, setProductName] = useState('');
     const [productDescription, setProductDescription] = useState('');
+    const [isEditingDescription, setIsEditingDescription] = useState(false);
     
     const [styles, setStyles] = useState<Style[]>(DEFAULT_STYLES);
     const [imageUrls, setImageUrls] = useState<Map<string, string | null>>(new Map());
@@ -139,6 +176,7 @@ function App() {
         setStyles(DEFAULT_STYLES);
         setIsIdentifying(false);
         setIsSuggestingStyles(false);
+        setIsEditingDescription(false);
     }, []);
 
     const handleImageChange = useCallback(async (file: File | null) => {
@@ -173,6 +211,7 @@ function App() {
 
         setIsIdentifying(true);
         setError(null);
+        setIsEditingDescription(false);
 
         try {
             const info = await generateProductInfoFromImage(productImageBase64, productImageFile.type);
@@ -336,6 +375,7 @@ function App() {
         setImageUrls(new Map(itemToLoad.ads.map(ad => [ad.name, ad.url])));
         setError(null);
         setIsHistoryOpen(false);
+        setIsEditingDescription(false);
     }, [historyItems]);
 
     const handleClearHistory = useCallback(() => {
@@ -361,41 +401,13 @@ function App() {
 
     // Auto-resize textarea
     React.useEffect(() => {
-        const textarea = descriptionTextAreaRef.current;
-        if (textarea) {
+        if (isEditingDescription && descriptionTextAreaRef.current) {
+            const textarea = descriptionTextAreaRef.current;
             textarea.style.height = 'auto';
             textarea.style.height = `${textarea.scrollHeight}px`;
         }
-    }, [productDescription]);
+    }, [productDescription, isEditingDescription]);
 
-    // Keyboard shortcuts
-    React.useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            // Don't trigger if user is typing in an input/textarea
-            if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-                return;
-            }
-
-            // G - Generate All
-            if (e.key === 'g' || e.key === 'G') {
-                if (isActionable && !isGenerating) {
-                    e.preventDefault();
-                    handleGenerateAll();
-                }
-            }
-
-            // S - Save to History
-            if (e.key === 's' || e.key === 'S') {
-                if (generatedCount > 0) {
-                    e.preventDefault();
-                    handleSaveToHistory();
-                }
-            }
-        };
-
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isActionable, generatedCount, isGenerating, handleGenerateAll, handleSaveToHistory]);
     // Keyboard shortcuts
     React.useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -510,35 +522,41 @@ function App() {
                                         disabled={!isActionable}
                                     />
                                     <div className="relative">
-                                        <textarea
-                                            ref={descriptionTextAreaRef}
-                                            value={productDescription}
-                                            onChange={(e) => setProductDescription(e.target.value)}
-                                            placeholder="Product Description"
-                                            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 pb-8 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition resize-none overflow-hidden"
-                                            rows={8}
-                                            disabled={!isActionable}
-                                        />
+                                        {isEditingDescription ? (
+                                            <textarea
+                                                ref={descriptionTextAreaRef}
+                                                value={productDescription}
+                                                onChange={(e) => setProductDescription(e.target.value)}
+                                                onBlur={() => setIsEditingDescription(false)}
+                                                placeholder="Product Description"
+                                                className="w-full bg-slate-800 border border-indigo-500 rounded-lg px-4 py-2 pb-8 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition resize-none overflow-hidden"
+                                                rows={8}
+                                                disabled={!isActionable}
+                                                autoFocus
+                                                onFocus={(e) => e.currentTarget.select()}
+                                            />
+                                        ) : (
+                                            <div
+                                                onClick={() => isActionable && setIsEditingDescription(true)}
+                                                className={`w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 min-h-[192px] 
+                                                ${isActionable ? 'cursor-text hover:border-slate-600' : ''}`}
+                                                aria-label="Product description"
+                                            >
+                                                <FormattedDescription text={productDescription} placeholder="Product Description" />
+                                            </div>
+                                        )}
                                         <div className="absolute bottom-2 right-2 flex items-center gap-2">
                                             <span className={`text-xs ${productDescription.length > 1000 ? 'text-yellow-400' : 'text-slate-400'}`}>
                                                 {productDescription.length} characters
                                             </span>
-                                        </div>
-                                    </div>
-                                    <div className="relative">
-                                        <textarea
-                                            ref={descriptionTextAreaRef}
-                                            value={productDescription}
-                                            onChange={(e) => setProductDescription(e.target.value)}
-                                            placeholder="Product Description"
-                                            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 pb-8 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition resize-none overflow-hidden"
-                                            rows={8}
-                                            disabled={!isActionable}
-                                        />
-                                        <div className="absolute bottom-2 right-2 flex items-center gap-2">
-                                            <span className={`text-xs ${productDescription.length > 1000 ? 'text-yellow-400' : 'text-slate-400'}`}>
-                                                {productDescription.length} characters
-                                            </span>
+                                            {!isEditingDescription && isActionable && (
+                                                <button
+                                                    onClick={() => setIsEditingDescription(true)}
+                                                    className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold"
+                                                >
+                                                    Edit
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

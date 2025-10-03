@@ -95,7 +95,9 @@ const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ onComplete, onSkip })
         }
     };
 
-    const getTooltipPosition = () => {
+    // Fix: Use a specific type for the style object to ensure properties are defined before use.
+    // This resolves TypeScript errors by ensuring `left`, `top`, and `transform` are always strings.
+    const getTooltipPosition = (): React.CSSProperties => {
         if (!targetPosition || isWelcomeStep) {
             return {
                 top: '50%',
@@ -109,7 +111,7 @@ const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ onComplete, onSkip })
         const tooltipWidth = 448; // max-w-md = 28rem = 448px
         const tooltipHeight = 300; // estimated height
 
-        let style: React.CSSProperties = {};
+        let style: { top: string; left: string; transform: string; };
 
         switch (position) {
             case 'top':
@@ -143,8 +145,8 @@ const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ onComplete, onSkip })
         }
 
         // Adjust if tooltip would go off screen
-        const left = parseFloat(style.left as string);
-        const top = parseFloat(style.top as string);
+        const left = parseFloat(style.left);
+        const top = parseFloat(style.top);
 
         // Check right edge
         if (position === 'bottom' || position === 'top') {
