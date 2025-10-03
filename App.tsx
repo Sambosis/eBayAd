@@ -257,13 +257,16 @@ function App() {
             setEstimatedTimeRemaining(generationTime);
         } catch(e: any) {
             console.error(e);
-            setError(e.message || `Failed to generate ad for style: ${styleName}`);
+            const errorMessage = e.message || `Failed to generate ad for style: ${styleName}`;
+            setError(errorMessage);
             // Remove the loading state on error
             setImageUrls(prev => {
                 const newMap = new Map(prev);
                 newMap.delete(styleName);
                 return newMap;
             });
+            // Re-throw to allow callers like `handleGenerateAll` to stop execution
+            throw new Error(errorMessage);
         }
     }, [productImageBase64, productImageFile, productDescription, styles]);
 
@@ -289,16 +292,45 @@ function App() {
         }
     }, [productDescription, productImageBase64, productImageFile]);
 
-    const handleGenerateAll = useCallback(async () => {
+    const handleGenerateAll = useCallback(() => {
         if (!productImageBase64 || !productImageFile || !productDescription) return;
 
         const stylesToGenerate = styles.filter(style => !imageUrls.has(style.name));
+        if (stylesToGenerate.length === 0) return;
 
-        for (const style of stylesToGenerate) {
-            handleGenerateStyle(style.name);
-            // Add a small delay to avoid overwhelming the API
-            await new Promise(resolve => setTimeout(resolve, 500));
-        }
+        setError(null); // Clear previous errors
+
+        const CONCURRENT_LIMIT = 3;
+        const queue = [...stylesToGenerate];
+        const activePromises = new Set<Promise<void>>();
+        let hasFailed = false;
+
+        const processQueue = () => {
+            if (hasFailed) return;
+
+            while (activePromises.size < CONCURRENT_LIMIT && queue.length > 0) {
+                const style = queue.shift();
+                if (!style) continue;
+
+                const promise = handleGenerateStyle(style.name)
+                    .catch(err => {
+                        // The error is already set by handleGenerateStyle.
+                        // We just need to stop the process.
+                        console.error(`Stopping "Generate All" due to an error on style "${style.name}".`);
+                        hasFailed = true; // Prevent new tasks from starting
+                    })
+                    .finally(() => {
+                        activePromises.delete(promise);
+                        // A slot is free, try to process the next item from the queue.
+                        processQueue();
+                    });
+                
+                activePromises.add(promise);
+            }
+        };
+
+        processQueue();
+
     }, [styles, imageUrls, handleGenerateStyle, productImageBase64, productImageFile, productDescription]);
 
     const handleBulkDownload = useCallback(async () => {
