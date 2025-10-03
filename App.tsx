@@ -155,8 +155,10 @@ function App() {
     const [isSuggestingStyles, setIsSuggestingStyles] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const descriptionTextAreaRef = useRef<HTMLTextAreaElement>(null);
+    const descriptionContainerRef = useRef<HTMLDivElement>(null);
 
     const [selectedAd, setSelectedAd] = useState<{ url: string; name: string } | null>(null);
+    const [copyButtonText, setCopyButtonText] = useState('Copy');
     
     const [historyItems, setHistoryItems] = useLocalStorage<HistoryItem[]>('ad-gen-history', []);
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -426,6 +428,41 @@ function App() {
         setShowTutorial(false);
     }, [setTutorialCompleted]);
 
+    const handleCopyDescription = useCallback(async () => {
+        if (!productDescription || !descriptionContainerRef.current) return;
+
+        try {
+            const htmlContent = descriptionContainerRef.current.innerHTML;
+            const textContent = productDescription; // Raw markdown
+
+            const htmlBlob = new Blob([htmlContent], { type: 'text/html' });
+            const textBlob = new Blob([textContent], { type: 'text/plain' });
+
+            await navigator.clipboard.write([
+                new ClipboardItem({
+                    'text/html': htmlBlob,
+                    'text/plain': textBlob,
+                })
+            ]);
+
+            setCopyButtonText('Copied!');
+            setTimeout(() => setCopyButtonText('Copy'), 2000);
+        } catch (error) {
+            console.error('Failed to copy description as HTML:', error);
+            // Fallback to copying plain text
+            try {
+                await navigator.clipboard.writeText(productDescription);
+                setCopyButtonText('Copied Text!');
+                setTimeout(() => setCopyButtonText('Copy'), 2000);
+            } catch (fallbackError) {
+                console.error('Failed to copy description as plain text:', fallbackError);
+                setCopyButtonText('Failed!');
+                setTimeout(() => setCopyButtonText('Copy'), 2000);
+                alert('Could not copy text to clipboard. Please try again or copy manually.');
+            }
+        }
+    }, [productDescription]);
+
     // Derived state - must be before useEffect that uses them
     const isActionable = !!productImageBase64 && !!productDescription && !isIdentifying;
     const generatedCount = Array.from(imageUrls.values()).filter(v => v !== null).length;
@@ -439,6 +476,11 @@ function App() {
             textarea.style.height = `${textarea.scrollHeight}px`;
         }
     }, [productDescription, isEditingDescription]);
+
+    // Reset copy button text when description changes
+    React.useEffect(() => {
+        setCopyButtonText('Copy');
+    }, [productDescription]);
 
     // Keyboard shortcuts
     React.useEffect(() => {
@@ -569,6 +611,7 @@ function App() {
                                             />
                                         ) : (
                                             <div
+                                                ref={descriptionContainerRef}
                                                 onClick={() => isActionable && setIsEditingDescription(true)}
                                                 className={`w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 min-h-[192px] 
                                                 ${isActionable ? 'cursor-text hover:border-slate-600' : ''}`}
@@ -582,12 +625,24 @@ function App() {
                                                 {productDescription.length} characters
                                             </span>
                                             {!isEditingDescription && isActionable && (
-                                                <button
-                                                    onClick={() => setIsEditingDescription(true)}
-                                                    className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold"
-                                                >
-                                                    Edit
-                                                </button>
+                                                <div className="flex items-center gap-2">
+                                                    {productDescription && (
+                                                        <button
+                                                            onClick={handleCopyDescription}
+                                                            className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold disabled:text-slate-500 disabled:cursor-not-allowed"
+                                                            disabled={copyButtonText !== 'Copy'}
+                                                            title="Copy formatted description"
+                                                        >
+                                                            {copyButtonText}
+                                                        </button>
+                                                    )}
+                                                    <button
+                                                        onClick={() => setIsEditingDescription(true)}
+                                                        className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold"
+                                                    >
+                                                        Edit
+                                                    </button>
+                                                </div>
                                             )}
                                         </div>
                                     </div>
