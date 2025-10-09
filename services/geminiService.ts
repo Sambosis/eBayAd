@@ -1,87 +1,44 @@
 import { GoogleGenAI, Modality, Type } from "@google/genai";
 
 const PROMPT_TEMPLATE = (description: string, style: string) => `
-You are a world-class graphic designer and visual marketing expert specializing in high-converting e-commerce product advertisements.
-Your task is to create a compelling, professional-grade advertisement image for online marketplace listings.
+Task: You are a professional advertising designer. Your task is to create a stunning and effective advertisement image for an e-commerce platform using the provided product photo.
 
-**Style Theme:** ${style}
+Style Guide:
+- Adhere strictly to the following style: ${style}
 
-**Product Description:** "${description}"
+Product Information:
+${description}
 
-**DESIGN REQUIREMENTS:**
+Core Directives:
+1.  **Product Prominence:** The product from the user's image MUST be the hero. It should be large, centrally located, and occupy a significant portion of the frame (at least 60-70%). The image should be a close-up or medium shot that showcases the product's form and texture.
+2.  **Feature Callouts:** Analyze the 'Product Information' to identify 2-3 key features. Create visually integrated callouts (using lines, pointers, or stylized text labels) that point directly to these features on the product. These callouts should be brief, impactful, and designed to fit the overall ad style.
+3.  **Dynamic Composition:** Create a visually engaging composition. The background and any added elements must complement the product and the specified style, without overpowering the product itself. The background should contrast with the product's main color to ensure it stands out.
+4.  **Readability:** Ensure any text (feature callouts, headlines, etc.) is clearly readable, well-placed, and grammatically correct.
 
-1.  **Visual Hierarchy & Composition:**
-    - Use the rule of thirds for balanced composition
-    - Create clear focal points that guide the eye naturally
-    - Ensure the product is the hero element (40-50% of the space)
-    - Use negative space strategically to avoid clutter
-
-2.  **Product Presentation:**
-    - Isolate the product from the original image with perfect edge detection
-    - Remove ALL backgrounds completely - extract just the product
-    - Add professional lighting effects: subtle shadows, highlights, and depth
-    - Position the product at a dynamic angle if appropriate for the style
-    - Apply a soft drop shadow or reflection for dimensionality
-
-3.  **Typography & Text Hierarchy:**
-    - Product name: Large, bold, attention-grabbing (matches style theme)
-    - Key features: Medium size, scannable bullet points or callouts
-    - Specifications: Smaller, organized, easy to read
-    - Use maximum 2-3 font families
-    - Ensure high contrast for readability (text vs background)
-
-4.  **Color Psychology:**
-    - Choose colors that match both the style theme AND product category
-    - Use complementary colors for visual interest
-    - **Background Contrast:** To ensure the product stands out, select a background that contrasts with the product's main color. For dark-colored products, prefer a light background. For light-colored products, prefer a dark background. This contrast is crucial for visual impact.
-    - Maintain 60-30-10 color ratio (dominant-secondary-accent)
-    - Ensure brand/product colors are honored if applicable
-
-5.  **Visual Elements & Icons:**
-    - Use modern, minimalist icons for features (battery life, speed, size, etc.)
-    - Ensure icons are consistent in style and weight
-    - Add subtle geometric shapes or patterns that enhance the style
-    - Include trust indicators when appropriate (warranty, quality badges)
-
-6.  **Information Display:**
-    - Highlight 3-5 KEY selling points maximum
-    - Use visual callouts with arrows or lines to point to features
-    - Create information boxes or cards for technical specs
-    - Use icons + text combinations for quick comprehension
-
-7.  **Professional Polish:**
-    - Add subtle gradients or textures that match the style
-    - Ensure all elements are perfectly aligned (use grids)
-    - Apply consistent spacing and padding
-    - Create depth with layering and shadows
-
-**CRITICAL RULES:**
-- NO retail packaging or boxes
-- NO platform-specific logos (eBay, Amazon, Etsy, etc.)
-- NO cluttered layouts - maintain clean, professional aesthetics
-- Text must be LARGE enough to read on mobile devices
-- Background MUST contrast with the product's main color. For dark-colored products, use a light background. For light-colored products, use a dark background.
-
-- All Text MUST be properly spelled and WITHOUT typos. 
-
-**OUTPUT:** A single, print-ready advertisement image at high resolution that stops scrollers and drives conversions.
+Critical Constraints:
+- CRITICAL: Do NOT include any of the original retail packaging from the user's photo.
+- CRITICAL: Do NOT add any marketplace logos (e.g., eBay, Amazon).
+- CRITICAL: The final image must be clean, high-resolution, and professional.
 `;
 
 const INFO_FROM_IMAGE_PROMPT = `
 You are an expert product identifier and copywriter.
 Based on the user-uploaded image, your task is to:
 1.  **Identify the Product:** Accurately determine the product's brand, model, and official name. If it's a generic item, provide a clear, descriptive name.
-2.  **Generate a Product Description:** Write a detailed, well-structured, and persuasive product description for online marketplace listings.
+2.  **Generate a Product Description:** Write a detailed, well-structured, and persuasive product description as an HTML string, suitable for online marketplace listings.
     - Use Google Search to find all relevant information about the identified product.
     - The description must include:
-        - A catchy title as the first line.
+        - A catchy title.
         - An introduction summarizing the product's main benefit.
         - A bulleted list of key features and specifications.
         - A list of what's typically included in the box.
         - A brief mention of the target audience.
     - **Formatting Rules:**
-        - Use clear headings with markdown (e.g., "**Key Features:**").
-        - Use markdown bullet points (-).
+        - The entire description must be a single, well-formed HTML string.
+        - Use <p> tags for paragraphs.
+        - Use <h3> tags for headings (e.g., "<h3>Key Features:</h3>").
+        - Use <ul> and <li> tags for bulleted lists.
+        - Use <strong> tags for bold/emphasized text where appropriate.
         - Keep the language professional but easy to understand.
         - Do not include pricing information.
         - Do not reference any specific marketplace platform (like eBay, Amazon, Etsy, etc.).
@@ -90,18 +47,24 @@ Based on the user-uploaded image, your task is to:
 **Output Format:**
 Return a single, valid JSON object with two keys: "productName" and "productDescription".
 - "productName": A string containing the official product name and model.
-- "productDescription": A string containing the full, markdown-formatted description. CRITICAL: All newline characters inside this string MUST be escaped as \\\\n to ensure the final output is a valid JSON object.
+- "productDescription": A string containing the full, HTML-formatted description. The string must be properly escaped to be a valid JSON string value.
 `;
 
 const SUGGEST_STYLES_PROMPT = `
-You are a world-class marketing and branding expert. Based on the provided product image and description, your task is to generate 3 to 5 innovative and relevant ad style concepts suitable for online marketplace listings.
+You are a world-class marketing and creative director. Your task is to generate exactly 3 distinct, innovative, and highly creative ad style concepts for the given product. Think outside the box and provide a diverse range of options, from commercially appealing to bold and artistic.
 
-For each concept, provide:
-1.  **name**: A short, catchy name for the style (e.g., 'Urban Explorer', 'Eco-Minimalist').
-2.  **description**: A brief, one-sentence description of the style's look and feel.
-3.  **prompt**: A detailed prompt for an image generation AI that captures the essence of the style. This prompt should be detailed enough to guide the creation of a complete advertisement image, describing aesthetics, color palettes, typography, layout, and overall mood. It should be similar in structure to prompts like: "Modern & Spec Driven: A sleek, contemporary aesthetic featuring clean lines, ample white space, and a minimalist design...".
+For each of the 3 concepts, provide:
+1.  **name**: A short, catchy, and descriptive name for the style (e.g., 'Kinetic Energy', 'Serene Tech', 'Retro Blueprint').
+2.  **description**: A brief, one-sentence description that powerfully evokes the style's look and feel.
+3.  **prompt**: A detailed, expert-level prompt for an image generation AI. This prompt is the most critical part. It must be rich with descriptive keywords and instructions to guide the creation of a complete advertisement image. It should specify:
+    - **Overall Mood & Vibe:** (e.g., energetic, luxurious, futuristic, organic)
+    - **Color Palette:** (e.g., neon-drenched jewel tones, muted earthy tones, high-contrast monochrome with a single accent color)
+    - **Lighting:** (e.g., dramatic studio lighting with hard shadows, soft and ethereal natural light, neon glow)
+    - **Background & Environment:** (e.g., an abstract geometric landscape, a hyper-realistic macro environment, a deconstructed product schematic)
+    - **Typography Style:** (e.g., bold sans-serif with glitch effects, elegant serif, handwritten script)
+    - **Compositional Notes:** (e.g., dynamic angles, rule of thirds, symmetrical)
 
-Analyze the product to determine what styles would be most effective in attracting its target audience.
+Analyze the product's function and target audience to brainstorm styles that are not just relevant but also surprising and memorable. Ensure the three styles are fundamentally different from each other.
 `;
 
 const styleSuggestionSchema = {
@@ -170,13 +133,10 @@ export const generateProductInfoFromImage = async (
 
         const parsed = JSON.parse(jsonText);
         if (parsed.productName && parsed.productDescription) {
-            // The model is instructed to escape newlines as \\n. JSON.parse turns that into a literal `\n` string.
-            // We need to replace those literals with actual newline characters for rendering.
-            const correctlyFormattedDescription = parsed.productDescription.replace(/\\n/g, '\n');
-
+            // The description is now HTML, so we don't need to process newlines.
             return {
                 productName: parsed.productName,
-                productDescription: correctlyFormattedDescription,
+                productDescription: parsed.productDescription,
             };
         } else {
              throw new Error("Invalid JSON structure in AI response.");
@@ -200,6 +160,7 @@ export const generateAdImage = async (
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
     const prompt = PROMPT_TEMPLATE(description, style);
+    console.log("Ad Image Generation Prompt:", prompt);
 
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image',

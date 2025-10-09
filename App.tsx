@@ -1,7 +1,7 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import ImageUploader from './components/ImageUploader';
 import GeneratedAd from './components/GeneratedAd';
-import AdPreviewModal from './components/AdPreviewModal';
+import AdGalleryModal from './components/AdPreviewModal';
 import HistoryPanel from './components/HistoryPanel';
 import TutorialOverlay from './components/TutorialOverlay';
 import { useLocalStorage } from './hooks/useLocalStorage';
@@ -35,50 +35,6 @@ export interface HistoryItem {
 
 // --- CONSTANTS ---
 
-const DEFAULT_STYLES: Style[] = [
-    {
-        name: "Modern & Minimalist",
-        description: "Clean, professional design with bold typography, geometric layouts, and striking color contrasts.",
-        prompt: "Modern & Minimalist: Ultra-clean design with generous white space and grid-based layout. Product positioned prominently at 45-degree angle with crisp drop shadow. Use bold, oversized sans-serif typography (Helvetica/Inter style) for product name. Feature icons in a clean horizontal row with labels. Color palette: Pure white background with ONE bold accent color (electric blue, vibrant orange, or deep purple) used sparingly. Include 3-4 key specs in clean info cards with icon pairs. Add subtle gradient overlays. High contrast, sharp edges, contemporary and premium feel."
-    },
-    {
-        name: "Tech & Cyberpunk",
-        description: "Futuristic neon-lit design with dark backgrounds, glowing effects, and digital aesthetics.",
-        prompt: "Tech & Cyberpunk: Dark background (deep navy or pure black) with electric neon accents (cyan, magenta, neon green). Product centered with dramatic lighting and neon glow effects. Typography: Bold, angular, uppercase geometric fonts. Add circuit board patterns, digital grid lines, or hexagonal tech patterns in background. Feature specs in glowing holographic-style cards. Use scan line effects and digital glitches sparingly. Include tech-style icons with neon outlines. Create depth with layered neon highlights and shadows. Mood: High-tech, gaming, cutting-edge innovation."
-    },
-    {
-        name: "Premium Luxury",
-        description: "Sophisticated design with gold accents, elegant serif fonts, and high-end photography style.",
-        prompt: "Premium Luxury: Rich, sophisticated color scheme (deep navy, charcoal black, burgundy) with metallic gold or rose gold accents. Product showcased like fine jewelry with perfect studio lighting and reflection. Typography: Elegant serif fonts (Playfair/Cormorant style) for headers, refined sans-serif for body. Add subtle textures (linen, marble, or leather patterns). Feature specs in ornate bordered frames. Include premium badges (quality seals, warranty icons). Use symmetrical, balanced composition. Soft shadows and highlights for dimension. Mood: Trustworthy, exclusive, high-value."
-    },
-    {
-        name: "Bold & Energetic",
-        description: "Eye-catching design with vibrant colors, dynamic angles, and explosive visual energy.",
-        prompt: "Bold & Energetic: Vibrant, saturated color palette (think sports brands - bright yellows, reds, electric blues). Product at dynamic 30-degree angle with motion blur or speed lines. Typography: Ultra-bold, condensed fonts with slight italics for movement. Add explosive shapes: diagonal slashes, arrows, starbursts. Feature callouts with angular speech bubbles or badges. Use high contrast complementary colors. Include action-oriented icons (lightning bolts, stars, check marks). Gradient backgrounds from bold to darker tones. Mood: Exciting, youthful, action-packed."
-    },
-    {
-        name: "Natural & Organic",
-        description: "Earthy, eco-friendly design with natural textures, soft colors, and handcrafted aesthetics.",
-        prompt: "Natural & Organic: Soft, natural color palette (sage green, warm beige, terracotta, soft cream). Product on textured background (wood grain, linen, recycled paper). Typography: Friendly rounded sans-serif or hand-written style fonts. Add organic shapes (leaves, branches, stones) as decorative elements. Feature specs in earth-toned cards with natural borders. Use sustainable/eco icons (leaves, recycling, earth). Include subtle paper textures or watercolor washes. Soft, natural shadows. Mood: Eco-conscious, authentic, wholesome, trustworthy."
-    },
-    {
-        name: "Vintage Retro",
-        description: "Nostalgic design with retro color schemes, classic typography, and aged textures.",
-        prompt: "Vintage Retro: Warm retro color palette (mustard yellow, burnt orange, avocado green, brown tones). Add aged paper texture with subtle grain and coffee stains. Product presented with vintage advertising style. Typography: Classic fonts (Cooper Black, Rockwell, or vintage script). Include retro badges, stamps, and ribbon banners. Feature specs in vintage label designs. Add halftone patterns or screenprint textures. Use muted, desaturated colors. Include retro icons (stars, badges, vintage illustrations). Mood: Nostalgic, authentic, timeless quality."
-    },
-    {
-        name: "Info-Graphic Style",
-        description: "Data-driven design with charts, diagrams, comparison visuals, and statistical presentation.",
-        prompt: "Info-Graphic Style: Clean infographic layout with product as centerpiece. Use visual data: pie charts showing feature breakdowns, bar graphs comparing specs, timeline diagrams. Typography: Clean, modern sans-serif (Roboto/Open Sans). Color code information categories with distinct colors (blue for performance, green for battery, orange for features). Include numbered callouts with connecting lines to product features. Add percentage circles, rating stars, and metric indicators. Use grid system with clear sections. Icons paired with statistics. Background: Light with subtle grid pattern. Mood: Informative, educational, data-focused."
-    },
-    {
-        name: "E-Sports & Gaming",
-        description: "High-energy gaming aesthetic with RGB effects, competitive styling, and esports branding.",
-        prompt: "E-Sports & Gaming: Dramatic dark background with RGB spectrum lighting effects (rainbow gradients, color transitions). Product with glowing RGB highlights and particle effects. Typography: Aggressive, angular gaming fonts (think Valorant/Apex style). Add geometric shapes: triangles, hexagons, sharp angles. Feature gaming-specific icons (FPS counter, ping, resolution). Include performance metrics in gaming HUD style. Use chromatic aberration effects subtly. Add energy streaks, light trails, or digital particles. Color scheme: Deep blacks with vibrant RGB accents. Mood: Competitive, powerful, high-performance."
-    },
-];
-
-
 // --- HELPER FUNCTIONS ---
 
 const fileToBase64 = (file: File): Promise<string> => {
@@ -99,42 +55,18 @@ const LogoIcon: React.FC<{ className?: string }> = ({ className }) => (
     </svg>
 );
 
-const FormattedDescription: React.FC<{ text: string; placeholder: string }> = ({ text, placeholder }) => {
-    if (!text) {
+const HtmlDescription: React.FC<{ html: string; placeholder: string }> = ({ html, placeholder }) => {
+    if (!html) {
         return <p className="text-slate-400">{placeholder}</p>;
     }
-
-    const renderWithFormatting = (line: string) => {
-        const parts = line.split(/(\*\*.*?\*\*)/g).filter(Boolean); 
-        return parts.map((part, index) => 
-            part.startsWith('**') && part.endsWith('**') ? 
-            <strong key={index}>{part.slice(2, -2)}</strong> : 
-            part
-        );
-    };
-    
     return (
-        <div className="text-slate-200 text-sm space-y-1">
-        {text.split('\n').map((line, index) => {
-            if (line.trim().startsWith('- ')) {
-                const content = line.trim().substring(2);
-                return (
-                    <div key={index} className="flex items-start pl-2">
-                        <span className="mr-2 mt-1 text-indigo-400">•</span>
-                        <p className="flex-1">{renderWithFormatting(content)}</p>
-                    </div>
-                );
-            }
-            if (line.trim() === '') {
-                return <div key={index} className="h-2"></div>;
-            }
-            return (
-                <p key={index}>{renderWithFormatting(line)}</p>
-            );
-        })}
-        </div>
+        <div
+            className="text-slate-200 text-sm [&_h3]:font-bold [&_h3]:text-white [&_h3]:mt-3 [&_h3]:mb-1 [&_p]:mb-1 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1"
+            dangerouslySetInnerHTML={{ __html: html }}
+        />
     );
 };
+
 
 // --- MAIN APP COMPONENT ---
 
@@ -146,10 +78,11 @@ function App() {
     const [productDescription, setProductDescription] = useState('');
     const [isEditingDescription, setIsEditingDescription] = useState(false);
     
-    const [styles, setStyles] = useState<Style[]>(DEFAULT_STYLES);
+    const [styles, setStyles] = useState<Style[]>([]);
     const [imageUrls, setImageUrls] = useState<Map<string, string | null>>(new Map());
     const [generationStartTime, setGenerationStartTime] = useState<number | null>(null);
     const [estimatedTimeRemaining, setEstimatedTimeRemaining] = useState<number | null>(null);
+    const [isInitialGenerationDone, setIsInitialGenerationDone] = useState(false);
 
     const [isIdentifying, setIsIdentifying] = useState(false);
     const [isSuggestingStyles, setIsSuggestingStyles] = useState(false);
@@ -157,7 +90,11 @@ function App() {
     const descriptionTextAreaRef = useRef<HTMLTextAreaElement>(null);
     const descriptionContainerRef = useRef<HTMLDivElement>(null);
 
-    const [selectedAd, setSelectedAd] = useState<{ url: string; name: string } | null>(null);
+    interface GalleryState {
+      isOpen: boolean;
+      initialIndex: number;
+    }
+    const [galleryState, setGalleryState] = useState<GalleryState>({ isOpen: false, initialIndex: 0 });
     const [copyButtonText, setCopyButtonText] = useState('Copy');
     
     const [historyItems, setHistoryItems] = useLocalStorage<HistoryItem[]>('ad-gen-history', []);
@@ -175,10 +112,11 @@ function App() {
         setProductDescription('');
         setImageUrls(new Map());
         setError(null);
-        setStyles(DEFAULT_STYLES);
+        setStyles([]);
         setIsIdentifying(false);
         setIsSuggestingStyles(false);
         setIsEditingDescription(false);
+        setIsInitialGenerationDone(false);
     }, []);
 
     const handleImageChange = useCallback(async (file: File | null) => {
@@ -210,7 +148,11 @@ function App() {
 
     const handleRegenerateDescription = useCallback(async () => {
         if (!productImageBase64 || !productImageFile) return;
-
+        
+        // Reset parts of the state for regeneration
+        setImageUrls(new Map());
+        setStyles([]);
+        setIsInitialGenerationDone(false);
         setIsIdentifying(true);
         setError(null);
         setIsEditingDescription(false);
@@ -228,16 +170,13 @@ function App() {
     }, [productImageBase64, productImageFile]);
 
 
-
-    const handleGenerateStyle = useCallback(async (styleName: string) => {
+    const handleGenerateStyle = useCallback(async (styleToGenerate: Style) => {
         if (!productImageBase64 || !productImageFile || !productDescription) return;
 
-        const currentStyle = styles.find(s => s.name === styleName);
-        if (!currentStyle) return;
+        const { name: styleName, prompt } = styleToGenerate;
 
         const startTime = Date.now();
 
-        // Set generation start time if this is the first generation
         setGenerationStartTime(prev => prev || startTime);
         setImageUrls(prev => new Map(prev).set(styleName, null));
         setError(null);
@@ -247,30 +186,61 @@ function App() {
                 productDescription,
                 productImageBase64,
                 productImageFile.type,
-                currentStyle.prompt,
+                prompt,
             );
             const imageUrl = `data:image/png;base64,${generatedImageBase64}`;
             setImageUrls(prev => new Map(prev).set(styleName, imageUrl));
 
-            // Calculate average time and update estimate
             const endTime = Date.now();
             const generationTime = endTime - startTime;
-            // Average generation time is around 15-30 seconds per ad
             setEstimatedTimeRemaining(generationTime);
         } catch(e: any) {
             console.error(e);
             const errorMessage = e.message || `Failed to generate ad for style: ${styleName}`;
             setError(errorMessage);
-            // Remove the loading state on error
             setImageUrls(prev => {
                 const newMap = new Map(prev);
                 newMap.delete(styleName);
                 return newMap;
             });
-            // Re-throw to allow callers like `handleGenerateAll` to stop execution
             throw new Error(errorMessage);
         }
-    }, [productImageBase64, productImageFile, productDescription, styles]);
+    }, [productImageBase64, productImageFile, productDescription]);
+    
+    const handleGenerateStyles = useCallback((stylesToGenerate: Style[]) => {
+        if (!productImageBase64 || !productImageFile || !productDescription || stylesToGenerate.length === 0) return;
+
+        setError(null);
+
+        const CONCURRENT_LIMIT = 3;
+        const queue = [...stylesToGenerate];
+        const activePromises = new Set<Promise<void>>();
+        let hasFailed = false;
+
+        const processQueue = () => {
+            if (hasFailed) return;
+
+            while (activePromises.size < CONCURRENT_LIMIT && queue.length > 0) {
+                const style = queue.shift();
+                if (!style) continue;
+
+                const promise = handleGenerateStyle(style)
+                    .catch(err => {
+                        console.error(`Stopping "Generate All" due to an error on style "${style.name}".`);
+                        hasFailed = true; 
+                    })
+                    .finally(() => {
+                        activePromises.delete(promise);
+                        processQueue();
+                    });
+                
+                activePromises.add(promise);
+            }
+        };
+
+        processQueue();
+    }, [productImageBase64, productImageFile, productDescription, handleGenerateStyle]);
+
 
     const handleSuggestStyles = useCallback(async () => {
         if (!productImageBase64 || !productImageFile || !productDescription) return;
@@ -286,54 +256,14 @@ function App() {
             );
             const newStyles = suggestions.map(s => ({ ...s, isSuggested: true }));
             setStyles(prev => [...prev, ...newStyles]);
+            handleGenerateStyles(newStyles);
         } catch (e: any) {
             console.error(e);
             setError(e.message || 'Failed to suggest new styles.');
         } finally {
             setIsSuggestingStyles(false);
         }
-    }, [productDescription, productImageBase64, productImageFile]);
-
-    const handleGenerateAll = useCallback(() => {
-        if (!productImageBase64 || !productImageFile || !productDescription) return;
-
-        const stylesToGenerate = styles.filter(style => !imageUrls.has(style.name));
-        if (stylesToGenerate.length === 0) return;
-
-        setError(null); // Clear previous errors
-
-        const CONCURRENT_LIMIT = 3;
-        const queue = [...stylesToGenerate];
-        const activePromises = new Set<Promise<void>>();
-        let hasFailed = false;
-
-        const processQueue = () => {
-            if (hasFailed) return;
-
-            while (activePromises.size < CONCURRENT_LIMIT && queue.length > 0) {
-                const style = queue.shift();
-                if (!style) continue;
-
-                const promise = handleGenerateStyle(style.name)
-                    .catch(err => {
-                        // The error is already set by handleGenerateStyle.
-                        // We just need to stop the process.
-                        console.error(`Stopping "Generate All" due to an error on style "${style.name}".`);
-                        hasFailed = true; // Prevent new tasks from starting
-                    })
-                    .finally(() => {
-                        activePromises.delete(promise);
-                        // A slot is free, try to process the next item from the queue.
-                        processQueue();
-                    });
-                
-                activePromises.add(promise);
-            }
-        };
-
-        processQueue();
-
-    }, [styles, imageUrls, handleGenerateStyle, productImageBase64, productImageFile, productDescription]);
+    }, [productDescription, productImageBase64, productImageFile, handleGenerateStyles]);
 
     const handleBulkDownload = useCallback(async () => {
         const JSZip = (await import('jszip')).default;
@@ -410,6 +340,7 @@ function App() {
         setError(null);
         setIsHistoryOpen(false);
         setIsEditingDescription(false);
+        setIsInitialGenerationDone(true); // Mark as done since we are loading completed ads
     }, [historyItems]);
 
     const handleClearHistory = useCallback(() => {
@@ -429,11 +360,12 @@ function App() {
     }, [setTutorialCompleted]);
 
     const handleCopyDescription = useCallback(async () => {
-        if (!productDescription || !descriptionContainerRef.current) return;
+        if (!productDescription) return;
 
         try {
-            const htmlContent = descriptionContainerRef.current.innerHTML;
-            const textContent = productDescription; // Raw markdown
+            const htmlContent = productDescription; // This is the raw HTML
+            // Create a plain text version for fallback
+            const textContent = productDescription.replace(/<[^>]*>?/gm, '');
 
             const htmlBlob = new Blob([htmlContent], { type: 'text/html' });
             const textBlob = new Blob([textContent], { type: 'text/plain' });
@@ -449,10 +381,10 @@ function App() {
             setTimeout(() => setCopyButtonText('Copy'), 2000);
         } catch (error) {
             console.error('Failed to copy description as HTML:', error);
-            // Fallback to copying plain text
+            // Fallback to copying the raw HTML string as plain text
             try {
                 await navigator.clipboard.writeText(productDescription);
-                setCopyButtonText('Copied Text!');
+                setCopyButtonText('Copied HTML!');
                 setTimeout(() => setCopyButtonText('Copy'), 2000);
             } catch (fallbackError) {
                 console.error('Failed to copy description as plain text:', fallbackError);
@@ -467,9 +399,21 @@ function App() {
     const isActionable = !!productImageBase64 && !!productDescription && !isIdentifying;
     const generatedCount = Array.from(imageUrls.values()).filter(v => v !== null).length;
     const isGenerating = Array.from(imageUrls.values()).some(v => v === null) && imageUrls.size > 0;
+    const generatedAds = Array.from(imageUrls.entries())
+        .filter(([, url]) => url !== null)
+        .map(([name, url]) => ({ name, url: url! }));
+
+    // Auto-suggest styles and generate when description is first loaded
+    useEffect(() => {
+        if (productDescription && !isInitialGenerationDone && !isGenerating) {
+            setIsInitialGenerationDone(true);
+            handleSuggestStyles();
+        }
+    }, [productDescription, isInitialGenerationDone, isGenerating, handleSuggestStyles]);
+
 
     // Auto-resize textarea
-    React.useEffect(() => {
+    useEffect(() => {
         if (isEditingDescription && descriptionTextAreaRef.current) {
             const textarea = descriptionTextAreaRef.current;
             textarea.style.height = 'auto';
@@ -478,24 +422,16 @@ function App() {
     }, [productDescription, isEditingDescription]);
 
     // Reset copy button text when description changes
-    React.useEffect(() => {
+    useEffect(() => {
         setCopyButtonText('Copy');
     }, [productDescription]);
 
     // Keyboard shortcuts
-    React.useEffect(() => {
+    useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             // Don't trigger if user is typing in an input/textarea
             if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
                 return;
-            }
-
-            // G - Generate All
-            if (e.key === 'g' || e.key === 'G') {
-                if (isActionable && !isGenerating) {
-                    e.preventDefault();
-                    handleGenerateAll();
-                }
             }
 
             // S - Save to History
@@ -509,7 +445,7 @@ function App() {
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isActionable, generatedCount, isGenerating, handleGenerateAll, handleSaveToHistory]);
+    }, [isActionable, generatedCount, isGenerating, handleSaveToHistory]);
 
     return (
         <>
@@ -595,19 +531,18 @@ function App() {
                                         className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition"
                                         disabled={!isActionable}
                                     />
-                                    <div className="relative">
+                                    <div>
                                         {isEditingDescription ? (
                                             <textarea
                                                 ref={descriptionTextAreaRef}
                                                 value={productDescription}
                                                 onChange={(e) => setProductDescription(e.target.value)}
                                                 onBlur={() => setIsEditingDescription(false)}
-                                                placeholder="Product Description"
-                                                className="w-full bg-slate-800 border border-indigo-500 rounded-lg px-4 py-2 pb-8 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition resize-none overflow-hidden"
-                                                rows={8}
+                                                placeholder="Product Description (HTML)"
+                                                className="w-full bg-slate-800 border border-indigo-500 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition resize-none overflow-hidden font-mono text-sm"
+                                                rows={10}
                                                 disabled={!isActionable}
                                                 autoFocus
-                                                onFocus={(e) => e.currentTarget.select()}
                                             />
                                         ) : (
                                             <div
@@ -617,25 +552,23 @@ function App() {
                                                 ${isActionable ? 'cursor-text hover:border-slate-600' : ''}`}
                                                 aria-label="Product description"
                                             >
-                                                <FormattedDescription text={productDescription} placeholder="Product Description" />
+                                                <HtmlDescription html={productDescription} placeholder="Product Description" />
                                             </div>
                                         )}
-                                        <div className="absolute bottom-2 right-2 flex items-center gap-2">
-                                            <span className={`text-xs ${productDescription.length > 1000 ? 'text-yellow-400' : 'text-slate-400'}`}>
+                                        <div className="flex items-center justify-end gap-4 mt-2">
+                                            <span className={`text-xs ${productDescription.length > 1500 ? 'text-yellow-400' : 'text-slate-400'}`}>
                                                 {productDescription.length} characters
                                             </span>
-                                            {!isEditingDescription && isActionable && (
+                                            {!isEditingDescription && isActionable && productDescription && (
                                                 <div className="flex items-center gap-2">
-                                                    {productDescription && (
-                                                        <button
-                                                            onClick={handleCopyDescription}
-                                                            className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold disabled:text-slate-500 disabled:cursor-not-allowed"
-                                                            disabled={copyButtonText !== 'Copy'}
-                                                            title="Copy formatted description"
-                                                        >
-                                                            {copyButtonText}
-                                                        </button>
-                                                    )}
+                                                    <button
+                                                        onClick={handleCopyDescription}
+                                                        className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold disabled:text-slate-500 disabled:cursor-not-allowed"
+                                                        disabled={copyButtonText !== 'Copy'}
+                                                        title="Copy description as HTML"
+                                                    >
+                                                        {copyButtonText}
+                                                    </button>
                                                     <button
                                                         onClick={() => setIsEditingDescription(true)}
                                                         className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold"
@@ -673,15 +606,24 @@ function App() {
                         <div className="flex flex-col gap-6">
                             <div data-tutorial="ad-styles">
                                 <h2 className="text-lg font-semibold text-white mb-2">3. Generate Ad <span className="text-indigo-400">Style</span></h2>
+                                {isActionable && isSuggestingStyles && styles.length === 0 && (
+                                    <div className="text-center p-4 bg-slate-900 rounded-lg mb-4">
+                                        <p className="text-white animate-pulse"><span className="text-indigo-400">AI</span> is suggesting ad styles for your product...</p>
+                                    </div>
+                                )}
                                 <GeneratedAd
                                     styles={styles}
                                     onGenerateStyle={handleGenerateStyle}
                                     imageUrls={imageUrls}
-                                    onPreview={(url, name) => setSelectedAd({ url, name })}
+                                    onPreview={(styleName) => {
+                                        const initialIndex = generatedAds.findIndex(ad => ad.name === styleName);
+                                        if (initialIndex !== -1) {
+                                            setGalleryState({ isOpen: true, initialIndex });
+                                        }
+                                    }}
                                     isActionable={isActionable}
                                     onSuggestStyles={handleSuggestStyles}
                                     isSuggestingStyles={isSuggestingStyles}
-                                    onGenerateAll={handleGenerateAll}
                                     onBulkDownload={handleBulkDownload}
                                     estimatedTimePerAd={estimatedTimeRemaining}
                                 />
@@ -691,9 +633,11 @@ function App() {
                 </main>
             </div>
 
-            <AdPreviewModal 
-                selectedAd={selectedAd}
-                onClose={() => setSelectedAd(null)}
+            <AdGalleryModal
+                isOpen={galleryState.isOpen}
+                ads={generatedAds}
+                initialIndex={galleryState.initialIndex}
+                onClose={() => setGalleryState({ isOpen: false, initialIndex: 0 })}
             />
             <HistoryPanel
                 isOpen={isHistoryOpen}

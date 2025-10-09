@@ -9,13 +9,12 @@ interface Style {
 
 interface GeneratedAdProps {
     styles: Style[];
-    onGenerateStyle: (styleName: string) => void;
+    onGenerateStyle: (style: Style) => void;
     imageUrls: Map<string, string | null>;
-    onPreview: (url: string, styleName: string) => void;
+    onPreview: (styleName: string) => void;
     isActionable: boolean;
     onSuggestStyles: () => void;
     isSuggestingStyles: boolean;
-    onGenerateAll: () => void;
     onBulkDownload: () => void;
     estimatedTimePerAd?: number | null;
 }
@@ -58,7 +57,7 @@ const styleIconMap: { [key: string]: React.FC<{ className?: string }> } = {
 
 // ... (keep all your existing interfaces and icon components)
 
-const GeneratedAd: React.FC<GeneratedAdProps> = ({ styles, onGenerateStyle, imageUrls, onPreview, isActionable, onSuggestStyles, isSuggestingStyles, onGenerateAll, onBulkDownload, estimatedTimePerAd }) => {
+const GeneratedAd: React.FC<GeneratedAdProps> = ({ styles, onGenerateStyle, imageUrls, onPreview, isActionable, onSuggestStyles, isSuggestingStyles, onBulkDownload, estimatedTimePerAd }) => {
     const [hoveredStyle, setHoveredStyle] = useState<string | null>(null);
 
     const generatedCount = Array.from(imageUrls.values()).filter(v => v !== null).length;
@@ -82,7 +81,7 @@ const GeneratedAd: React.FC<GeneratedAdProps> = ({ styles, onGenerateStyle, imag
         <>
             <div className="text-center mb-4">
                 <h2 className="text-lg font-semibold text-slate-200">
-                    Click a Style to <span className="text-indigo-400">Generate</span>
+                    Generated Ad <span className="text-indigo-400">Styles</span>
                 </h2>
 
                 {/* Progress Indicator */}
@@ -129,17 +128,9 @@ const GeneratedAd: React.FC<GeneratedAdProps> = ({ styles, onGenerateStyle, imag
                         ) : (
                             <>
                                 <LightbulbIcon className="w-4 h-4" />
-                                Suggest Styles
+                                Suggest More Styles
                             </>
                         )}
-                    </button>
-                    <button
-                        onClick={onGenerateAll}
-                        disabled={!isActionable || isGenerating}
-                        className="inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-600/50 disabled:cursor-not-allowed text-white font-semibold py-2.5 px-5 rounded-lg transition-all duration-300 ease-in-out text-sm"
-                    >
-                        <SparklesIcon className="w-4 h-4" />
-                        Generate All
                     </button>
                     {generatedCount > 0 && (
                         <button
@@ -168,39 +159,48 @@ const GeneratedAd: React.FC<GeneratedAdProps> = ({ styles, onGenerateStyle, imag
                             onMouseLeave={() => setHoveredStyle(null)}
                         >
                             {/* Tooltip */}
-                            {hoveredStyle === style.name && !imageUrl && !isGenerating && (
-                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 w-64 p-3 bg-slate-800 border border-slate-600 rounded-lg shadow-xl">
+                            {hoveredStyle === style.name && !isGenerating && (
+                                <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 ${imageUrl ? 'whitespace-nowrap px-3 py-1.5' : 'w-80 p-4'} bg-slate-800 border border-slate-600 rounded-lg shadow-xl`}>
                                     <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-slate-800"></div>
-                                    <p className="text-xs font-semibold text-indigo-300 mb-1">{style.name}</p>
-                                    <p className="text-xs text-slate-200 leading-relaxed">{style.description}</p>
+                                    {imageUrl ? (
+                                        <p className="text-sm font-semibold text-white">{style.name}</p>
+                                    ) : (
+                                        <>
+                                            <p className="text-sm font-semibold text-indigo-300 mb-2">{style.name}</p>
+                                            <div className="space-y-2">
+                                                <p className="text-xs text-slate-300 leading-relaxed">{style.description}</p>
+                                                <div>
+                                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Full AI Prompt:</p>
+                                                    <p className="mt-1 max-h-48 overflow-y-auto rounded-md bg-slate-900/80 p-2 font-mono text-xs text-slate-200 leading-relaxed">
+                                                        {style.prompt}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
                             )}
 
                             <div
                                 className={`relative aspect-square bg-slate-900 rounded-lg overflow-hidden border transition-all duration-300 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-slate-900
-                                ${imageUrl ? 'border-indigo-500/50 shadow-lg shadow-indigo-500/20 cursor-pointer hover:scale-[1.02]' : 'border-slate-700'}
-                                ${isActionable && !imageUrl && !isGenerating ? 'cursor-pointer hover:border-indigo-500 hover:scale-[1.03]' : !imageUrl && 'cursor-default'}
+                                ${imageUrl ? 'border-indigo-500/50 shadow-lg shadow-indigo-500/20 cursor-pointer hover:scale-[1.02]' : 'border-slate-700 cursor-default'}
                                 ${!isActionable && 'opacity-50'}
                             `}
                                 onClick={() => {
-                                    if (isActionable && !imageUrl && !isGenerating) {
-                                        onGenerateStyle(style.name);
-                                    } else if (imageUrl) {
-                                        onPreview(imageUrl, style.name);
+                                    if (imageUrl) {
+                                        onPreview(style.name);
                                     }
                                 }}
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter' || e.key === ' ') {
-                                        if (isActionable && !imageUrl && !isGenerating) {
-                                            onGenerateStyle(style.name);
-                                        } else if (imageUrl) {
-                                            onPreview(imageUrl, style.name);
+                                        if (imageUrl) {
+                                            onPreview(style.name);
                                         }
                                     }
                                 }}
-                                aria-label={imageUrl ? `Preview ad in ${style.name} style` : `Generate ad in ${style.name} style`}
+                                aria-label={imageUrl ? `Preview ad in ${style.name} style` : `Ad generation in progress for ${style.name} style`}
                                 role="button"
-                                tabIndex={isActionable && !isGenerating ? 0 : -1}
+                                tabIndex={imageUrl ? 0 : -1}
                             >
                                 {style.isSuggested && (
                                     <div className="absolute top-2 right-2 z-10 bg-indigo-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg">
