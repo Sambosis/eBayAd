@@ -66,12 +66,15 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({ isOpen, onClose, historyIte
                                 >
                                     {/* Subtle gradient glow on hover */}
                                     <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/0 to-purple-500/0 group-hover:from-indigo-500/5 group-hover:to-purple-500/5 rounded-lg transition-all duration-300 pointer-events-none"></div>
+                                    
+                                    {item.productImages && item.productImages.length > 0 && (
+                                        <img
+                                            src={`data:${item.productImages[0].type};base64,${item.productImages[0].base64}`}
+                                            alt={item.productName}
+                                            className="w-20 h-20 object-contain rounded-md bg-slate-800 relative z-10"
+                                        />
+                                    )}
 
-                                    <img
-                                        src={`data:${item.productImage.type};base64,${item.productImage.base64}`}
-                                        alt={item.productName}
-                                        className="w-20 h-20 object-contain rounded-md bg-slate-800 relative z-10"
-                                    />
                                     <div className="flex-1 relative z-10">
                                         <p className="font-semibold text-white truncate" title={item.productName}>
                                             {item.productName || 'Untitled Product'}

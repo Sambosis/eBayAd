@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import ImageUploader from './components/ImageUploader';
 import GeneratedAd from './components/GeneratedAd';
@@ -25,10 +26,10 @@ export interface HistoryItem {
     createdAt: number;
     productName: string;
     productDescription: string;
-    productImage: {
+    productImages: {
         base64: string;
         type: string;
-    };
+    }[];
     ads: { name: string; url: string }[];
     styles: Style[];
 }
@@ -37,17 +38,29 @@ export interface HistoryItem {
 
 // --- HELPER FUNCTIONS ---
 
-const fileToBase64 = (file: File): Promise<string> => {
+const fileToBase64 = (file: File): Promise<{ base64: string; type: string }> => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
         reader.onload = () => {
             const result = (reader.result as string).split(',')[1];
-            resolve(result);
+            resolve({ base64: result, type: file.type });
         };
         reader.onerror = error => reject(error);
     });
 };
+
+const base64ToFile = (base64: string, mimeType: string, fileName: string): File => {
+    const byteCharacters = atob(base64);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], { type: mimeType });
+    return new File([blob], fileName, { type: mimeType });
+};
+
 
 const LogoIcon: React.FC<{ className?: string }> = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
@@ -72,8 +85,9 @@ const HtmlDescription: React.FC<{ html: string; placeholder: string }> = ({ html
 
 function App() {
     // State
-    const [productImageFile, setProductImageFile] = useState<File | null>(null);
-    const [productImageBase64, setProductImageBase64] = useState<string | null>(null);
+    const [productImageFiles, setProductImageFiles] = useState<File[]>([]);
+    const [productImages, setProductImages] = useState<{ base64: string; type: string }[]>([]);
+
     const [productName, setProductName] = useState('');
     const [productDescription, setProductDescription] = useState('');
     const [isEditingDescription, setIsEditingDescription] = useState(false);
@@ -103,10 +117,10 @@ function App() {
     const [showTutorial, setShowTutorial] = useState(!tutorialCompleted);
 
     // Callbacks & Handlers
-    const resetState = useCallback((clearImage: boolean = true) => {
-        if (clearImage) {
-            setProductImageFile(null);
-            setProductImageBase64(null);
+    const resetState = useCallback((clearImages: boolean = true) => {
+        if (clearImages) {
+            setProductImageFiles([]);
+            setProductImages([]);
         }
         setProductName('');
         setProductDescription('');
@@ -119,23 +133,23 @@ function App() {
         setIsInitialGenerationDone(false);
     }, []);
 
-    const handleImageChange = useCallback(async (file: File | null) => {
-        if (!file) {
-            resetState();
+    const handleImageChange = useCallback(async (files: File[]) => {
+        setProductImageFiles(files);
+
+        if (files.length === 0) {
+            resetState(true);
             return;
         }
 
-
-        resetState();
-        setProductImageFile(file);
+        resetState(false);
         setError(null);
         setIsIdentifying(true);
 
         try {
-            const base64 = await fileToBase64(file);
-            setProductImageBase64(base64);
+            const processedImages = await Promise.all(files.map(fileToBase64));
+            setProductImages(processedImages);
 
-            const info = await generateProductInfoFromImage(base64, file.type);
+            const info = await generateProductInfoFromImage(processedImages);
             setProductName(info.productName);
             setProductDescription(info.productDescription);
         } catch (e: any) {
@@ -147,7 +161,7 @@ function App() {
     }, [resetState]);
 
     const handleRegenerateDescription = useCallback(async () => {
-        if (!productImageBase64 || !productImageFile) return;
+        if (productImages.length === 0) return;
         
         // Reset parts of the state for regeneration
         setImageUrls(new Map());
@@ -158,7 +172,7 @@ function App() {
         setIsEditingDescription(false);
 
         try {
-            const info = await generateProductInfoFromImage(productImageBase64, productImageFile.type);
+            const info = await generateProductInfoFromImage(productImages);
             setProductName(info.productName);
             setProductDescription(info.productDescription);
         } catch (e: any) {
@@ -167,11 +181,11 @@ function App() {
         } finally {
             setIsIdentifying(false);
         }
-    }, [productImageBase64, productImageFile]);
+    }, [productImages]);
 
 
     const handleGenerateStyle = useCallback(async (styleToGenerate: Style) => {
-        if (!productImageBase64 || !productImageFile || !productDescription) return;
+        if (productImages.length === 0 || !productDescription) return;
 
         const { name: styleName, prompt } = styleToGenerate;
 
@@ -184,8 +198,7 @@ function App() {
         try {
             const generatedImageBase64 = await generateAdImage(
                 productDescription,
-                productImageBase64,
-                productImageFile.type,
+                productImages,
                 prompt,
             );
             const imageUrl = `data:image/png;base64,${generatedImageBase64}`;
@@ -205,10 +218,10 @@ function App() {
             });
             throw new Error(errorMessage);
         }
-    }, [productImageBase64, productImageFile, productDescription]);
+    }, [productImages, productDescription]);
     
     const handleGenerateStyles = useCallback((stylesToGenerate: Style[]) => {
-        if (!productImageBase64 || !productImageFile || !productDescription || stylesToGenerate.length === 0) return;
+        if (productImages.length === 0 || !productDescription || stylesToGenerate.length === 0) return;
 
         setError(null);
 
@@ -239,11 +252,11 @@ function App() {
         };
 
         processQueue();
-    }, [productImageBase64, productImageFile, productDescription, handleGenerateStyle]);
+    }, [productImages, productDescription, handleGenerateStyle]);
 
 
     const handleSuggestStyles = useCallback(async () => {
-        if (!productImageBase64 || !productImageFile || !productDescription) return;
+        if (productImages.length === 0 || !productDescription) return;
 
         setIsSuggestingStyles(true);
         setError(null);
@@ -251,8 +264,7 @@ function App() {
         try {
             const suggestions = await generateAdStyleSuggestions(
                 productDescription,
-                productImageBase64,
-                productImageFile.type
+                productImages,
             );
             const newStyles = suggestions.map(s => ({ ...s, isSuggested: true }));
             setStyles(prev => [...prev, ...newStyles]);
@@ -263,22 +275,21 @@ function App() {
         } finally {
             setIsSuggestingStyles(false);
         }
-    }, [productDescription, productImageBase64, productImageFile, handleGenerateStyles]);
+    }, [productDescription, productImages, handleGenerateStyles]);
 
     const handleBulkDownload = useCallback(async () => {
         const JSZip = (await import('jszip')).default;
         const zip = new JSZip();
 
-        const generatedAds = Array.from(imageUrls.entries())
-            .filter(([, url]) => url !== null);
-
-        for (const [name, url] of generatedAds) {
+        // FIX: The iterator error on this line is resolved by using `forEach` directly on the Map,
+        // which avoids potential issues with `Array.from` and type inference in this context.
+        imageUrls.forEach((url, name) => {
             if (url) {
                 const base64Data = url.split(',')[1];
                 const safeStyleName = name.replace(/[^a-zA-Z0-9]/g, '-');
                 zip.file(`${safeStyleName}.png`, base64Data, { base64: true });
             }
-        }
+        });
 
         const blob = await zip.generateAsync({ type: 'blob' });
         const link = document.createElement('a');
@@ -290,7 +301,7 @@ function App() {
     }, [imageUrls, productName]);
     
     const handleSaveToHistory = useCallback(() => {
-        if (!productImageFile || !productImageBase64 || !productName) {
+        if (productImageFiles.length === 0 || !productName) {
             alert("Cannot save an empty session.");
             return;
         }
@@ -304,35 +315,25 @@ function App() {
             createdAt: Date.now(),
             productName,
             productDescription,
-            productImage: {
-                base64: productImageBase64,
-                type: productImageFile.type,
-            },
+            productImages: productImages,
             ads: generatedAds,
             styles: styles,
         };
 
         setHistoryItems(prev => [newHistoryItem, ...prev]);
         setIsHistoryOpen(true);
-    }, [productImageFile, productImageBase64, productName, productDescription, imageUrls, styles, setHistoryItems]);
+    }, [productImageFiles, productImages, productName, productDescription, imageUrls, styles, setHistoryItems]);
 
     const handleLoadItem = useCallback((id: number) => {
         const itemToLoad = historyItems.find(item => item.id === id);
         if (!itemToLoad) return;
-
-        // Create a File object approximation for the uploader preview
-        const mimeType = itemToLoad.productImage.type;
-        const byteCharacters = atob(itemToLoad.productImage.base64);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-            byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: mimeType });
-        const file = new File([blob], "loaded-image.jpg", { type: mimeType });
         
-        setProductImageFile(file);
-        setProductImageBase64(itemToLoad.productImage.base64);
+        const reconstructedFiles = itemToLoad.productImages.map((img, index) => 
+            base64ToFile(img.base64, img.type, `loaded-image-${index}.jpg`)
+        );
+        
+        setProductImageFiles(reconstructedFiles);
+        setProductImages(itemToLoad.productImages);
         setProductName(itemToLoad.productName);
         setProductDescription(itemToLoad.productDescription);
         setStyles(itemToLoad.styles);
@@ -396,7 +397,7 @@ function App() {
     }, [productDescription]);
 
     // Derived state - must be before useEffect that uses them
-    const isActionable = !!productImageBase64 && !!productDescription && !isIdentifying;
+    const isActionable = productImages.length > 0 && !!productDescription && !isIdentifying;
     const generatedCount = Array.from(imageUrls.values()).filter(v => v !== null).length;
     const isGenerating = Array.from(imageUrls.values()).some(v => v === null) && imageUrls.size > 0;
     const generatedAds = Array.from(imageUrls.entries())
@@ -485,10 +486,10 @@ function App() {
                         {/* Left Column: Input */}
                         <div className="flex flex-col gap-6">
                             <div data-tutorial="image-uploader">
-                                <h2 className="text-lg font-semibold text-white mb-2">1. Upload Product <span className="text-indigo-400">Image</span></h2>
+                                <h2 className="text-lg font-semibold text-white mb-2">1. Upload Product <span className="text-indigo-400">Images</span></h2>
                                 <ImageUploader
                                     onImageChange={handleImageChange}
-                                    imagePreviewUrl={productImageFile ? URL.createObjectURL(productImageFile) : null}
+                                    initialFiles={productImageFiles}
                                     disabled={isIdentifying}
                                 />
                             </div>
@@ -506,10 +507,10 @@ function App() {
                                 </div>
                             )}
 
-                            <div className={`transition-opacity duration-500 ${isActionable ? 'opacity-100' : 'opacity-50 pointer-events-none'}`} data-tutorial="product-info">
+                            <div className={`transition-opacity duration-500 ${isActionable || productName ? 'opacity-100' : 'opacity-50 pointer-events-none'}`} data-tutorial="product-info">
                                 <div className="flex items-center justify-between mb-2">
                                     <h2 className="text-lg font-semibold text-white">2. Review Product <span className="text-indigo-400">Info</span></h2>
-                                    {productImageBase64 && (
+                                    {productImages.length > 0 && (
                                         <button
                                             onClick={handleRegenerateDescription}
                                             disabled={isIdentifying}
@@ -529,7 +530,7 @@ function App() {
                                         onChange={(e) => setProductName(e.target.value)}
                                         placeholder="Product Name"
                                         className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition"
-                                        disabled={!isActionable}
+                                        disabled={!isActionable && !productName}
                                     />
                                     <div>
                                         {isEditingDescription ? (
@@ -582,7 +583,7 @@ function App() {
                                 </div>
                             </div>
                             
-                            {isActionable && (
+                            {(isActionable || productImages.length > 0) && (
                                 <div className="flex flex-col sm:flex-row gap-4 mt-2" data-tutorial="keyboard-shortcuts">
                                     <button
                                         onClick={handleSaveToHistory}

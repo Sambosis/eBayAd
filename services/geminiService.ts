@@ -1,7 +1,7 @@
 import { GoogleGenAI, Modality, Type } from "@google/genai";
 
 const PROMPT_TEMPLATE = (description: string, style: string) => `
-Task: You are a professional advertising designer. Your task is to create a stunning and effective advertisement image for an e-commerce platform using the provided product photo.
+Task: You are a professional advertising designer. Your task is to create a stunning and effective advertisement image for an e-commerce platform using the provided product photos. The photos show the same product from different angles.
 
 Style Guide:
 - Adhere strictly to the following style: ${style}
@@ -10,7 +10,7 @@ Product Information:
 ${description}
 
 Core Directives:
-1.  **Product Prominence:** The product from the user's image MUST be the hero. It should be large, centrally located, and occupy a significant portion of the frame (at least 60-70%). The image should be a close-up or medium shot that showcases the product's form and texture.
+1.  **Product Prominence:** The product from the user's images MUST be the hero. It should be large, centrally located, and occupy a significant portion of the frame (at least 60-70%). The image should be a close-up or medium shot that showcases the product's form and texture.
 2.  **Feature Callouts:** Analyze the 'Product Information' to identify 2-3 key features. Create visually integrated callouts (using lines, pointers, or stylized text labels) that point directly to these features on the product. These callouts should be brief, impactful, and designed to fit the overall ad style.
 3.  **Dynamic Composition:** Create a visually engaging composition. The background and any added elements must complement the product and the specified style, without overpowering the product itself. The background should contrast with the product's main color to ensure it stands out.
 4.  **Readability:** Ensure any text (feature callouts, headlines, etc.) is clearly readable, well-placed, and grammatically correct.
@@ -23,7 +23,7 @@ Critical Constraints:
 
 const INFO_FROM_IMAGE_PROMPT = `
 You are an expert product identifier and copywriter.
-Based on the user-uploaded image, your task is to:
+Based on the user-uploaded images of a single product, your task is to:
 1.  **Identify the Product:** Accurately determine the product's brand, model, and official name. If it's a generic item, provide a clear, descriptive name.
 2.  **Generate a Product Description:** Write a detailed, well-structured, and persuasive product description as an HTML string, suitable for online marketplace listings.
     - Use Google Search to find all relevant information about the identified product.
@@ -89,25 +89,31 @@ const styleSuggestionSchema = {
     },
 };
 
+interface ProductImage {
+    base64: string;
+    type: string;
+}
+
 export const generateProductInfoFromImage = async (
-    imageBase64: string,
-    mimeType: string
+    images: ProductImage[]
 ): Promise<{ productName: string; productDescription: string }> => {
     if (!process.env.API_KEY) {
         throw new Error("API_KEY environment variable not set.");
     }
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
+    const imageParts = images.map(image => ({
+        inlineData: {
+            data: image.base64,
+            mimeType: image.type,
+        },
+    }));
+
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: {
             parts: [
-                {
-                    inlineData: {
-                        data: imageBase64,
-                        mimeType: mimeType,
-                    },
-                },
+                ...imageParts,
                 {
                     text: INFO_FROM_IMAGE_PROMPT,
                 },
@@ -150,8 +156,7 @@ export const generateProductInfoFromImage = async (
 
 export const generateAdImage = async (
     description: string,
-    imageBase64: string,
-    mimeType: string,
+    images: ProductImage[],
     style: string
 ): Promise<string> => {
     if (!process.env.API_KEY) {
@@ -162,23 +167,28 @@ export const generateAdImage = async (
     const prompt = PROMPT_TEMPLATE(description, style);
     console.log("Ad Image Generation Prompt:", prompt);
 
+    const imageParts = images.map(image => ({
+        inlineData: {
+            data: image.base64,
+            mimeType: image.type,
+        },
+    }));
+
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image',
         contents: {
             parts: [
-                {
-                    inlineData: {
-                        data: imageBase64,
-                        mimeType: mimeType,
-                    },
-                },
+                ...imageParts,
                 {
                     text: prompt,
                 },
             ],
         },
         config: {
-            responseModalities: [Modality.IMAGE, Modality.TEXT],
+            // FIX: The iterator error reported for App.tsx likely originates here.
+            // According to Gemini API guidelines, responseModalities must contain exactly one modality.
+            // Requesting both IMAGE and TEXT may lead to an unexpected response structure.
+            responseModalities: [Modality.IMAGE],
         },
     });
 
@@ -195,8 +205,7 @@ export const generateAdImage = async (
 
 export const generateAdStyleSuggestions = async (
     productDescription: string,
-    imageBase64: string,
-    mimeType: string
+    images: ProductImage[]
 ): Promise<{ name: string; description: string; prompt: string }[]> => {
     if (!process.env.API_KEY) {
         throw new Error("API_KEY environment variable not set.");
@@ -208,17 +217,19 @@ Product Description: "${productDescription}"
 
 ${SUGGEST_STYLES_PROMPT}
 `;
+    
+    const imageParts = images.map(image => ({
+        inlineData: {
+            data: image.base64,
+            mimeType: image.type,
+        },
+    }));
 
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: {
             parts: [
-                {
-                    inlineData: {
-                        data: imageBase64,
-                        mimeType: mimeType,
-                    },
-                },
+                ...imageParts,
                 { text: fullPrompt },
             ],
         },

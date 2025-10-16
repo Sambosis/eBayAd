@@ -16,8 +16,8 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     },
     {
         target: 'image-uploader',
-        title: 'Step 1: Upload Your Product Image',
-        description: 'Start by uploading a clear photo of your product. Our AI will automatically identify it and extract key details.',
+        title: 'Step 1: Upload Your Product Images',
+        description: 'Start by uploading one or more clear photos of your product from your device, camera, or Google Photos. Our AI will automatically identify it and extract key details.',
         position: 'right'
     },
     {
@@ -41,7 +41,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     {
         target: 'keyboard-shortcuts',
         title: 'Pro Tip: Keyboard Shortcuts',
-        description: 'Press "G" to generate all ads quickly, or "S" to save to history. Happy creating!',
+        description: 'Press "S" to save your generated ads to history. Happy creating!',
         position: 'bottom'
     }
 ];
